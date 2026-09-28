@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Building2, KeyRound, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
@@ -25,6 +26,7 @@ const ROLE_LABELS = { vendor: "Vendor", admin: "Administrator" };
 
 function AdminInner() {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [userOpen, setUserOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_USER);
@@ -155,7 +157,16 @@ function AdminInner() {
                 <h2 className="text-base font-semibold text-slate-900">{t("nav_users")}</h2>
                 <p className="text-xs text-slate-500 mt-0.5">{t("users_note")}</p>
               </div>
-              <Dialog open={userOpen} onOpenChange={setUserOpen}>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/change-password")}
+                  data-testid="admin-update-password-button"
+                  className="gap-2 h-9"
+                >
+                  <KeyRound size={15} /> Update Password
+                </Button>
+                <Dialog open={userOpen} onOpenChange={setUserOpen}>
                 <DialogTrigger
                   render={
                     <Button data-testid="admin-add-user-open" className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white gap-2 h-9">
@@ -258,6 +269,7 @@ function AdminInner() {
                   </form>
                 </DialogContent>
               </Dialog>
+              </div>
             </div>
 
             <div className="overflow-x-auto">

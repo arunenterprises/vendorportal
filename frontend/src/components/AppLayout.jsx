@@ -21,7 +21,6 @@ function navItems(role) {
   if (role === "admin") {
     base.push({ to: "/admin", key: "nav_admin", icon: Sparkles, id: "admin" });
   }
-  base.push({ to: "/change-password", label: "Update Password", icon: KeyRound, id: "change-password" });
   return base;
 }
 
@@ -127,9 +126,24 @@ export default function AppLayout({ children, title, subtitle, action }) {
                 Contact: {vendor.contact_person}
               </p>
             )}
-            <span className="inline-block mt-2 text-[11px] px-2 py-0.5 rounded bg-[#16213E] text-blue-300 border border-slate-700">
-              {user.role === "admin" ? t("role_admin") : t("role_vendor")}
-            </span>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <span className="inline-block text-[11px] px-2 py-0.5 rounded bg-[#16213E] text-blue-300 border border-slate-700">
+                {user.role === "admin" ? t("role_admin") : t("role_vendor")}
+              </span>
+              <Link
+                to="/change-password"
+                onClick={() => setOpen(false)}
+                data-testid="nav-link-change-password"
+                title="Update Password"
+                className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded border
+                  [transition:background-color_.18s_ease,color_.18s_ease]
+                  ${location.pathname.startsWith("/change-password")
+                    ? "bg-[#1D4ED8] text-white border-[#1D4ED8]"
+                    : "text-slate-300 border-slate-700 hover:bg-[#16213E] hover:text-white"}`}
+              >
+                <KeyRound size={12} /> Update Password
+              </Link>
+            </div>
           </div>
         )}
       </aside>
