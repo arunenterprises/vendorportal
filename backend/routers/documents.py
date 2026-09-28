@@ -28,11 +28,16 @@ ALLOWED_DOC_TYPES = [
 async def list_documents(user=Depends(current_user)):
     q = {} if user.get("role") == "admin" else {"vendor_id": user.get("vendor_id")}
     docs = await db.documents.find(q, {"_id": 0, "data_base64": 0}).sort("uploaded_at", -1).to_list(500)
+    vendors = await db.vendors.find({}, {"_id": 0, "id": 1, "code": 1, "company_name": 1}).to_list(1000)
+    vmap = {v["id"]: v for v in vendors}
     out = []
     for d in docs:
         ts = d.get("uploaded_at")
         if isinstance(ts, datetime) and ts.tzinfo is None:
             d["uploaded_at"] = ts.replace(tzinfo=timezone.utc)
+        ven = vmap.get(d.get("vendor_id"), {})
+        d["vendor_code"] = ven.get("code", "")
+        d["vendor_name"] = ven.get("company_name", "")
         out.append(DocumentOut(**d))
     return out
 

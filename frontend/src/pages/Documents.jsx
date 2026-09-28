@@ -111,9 +111,13 @@ function DocumentsInner() {
   return (
     <AppLayout
       title="Compliance & Documents"
-      subtitle="Upload your Sale Invoice and statutory documents. Maximum file size 100 KB. Downloads are available to the admin only."
+      subtitle={
+        isAdmin
+          ? "All documents submitted by vendors. Only the admin can download them."
+          : "Upload your Sale Invoice and statutory documents. Maximum file size 100 KB. Downloads are available to the admin only."
+      }
     >
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_1.5fr] gap-6">
+      <div className={isVendor ? "grid grid-cols-1 xl:grid-cols-[1fr_1.5fr] gap-6" : "grid grid-cols-1 gap-6"}>
         {isVendor && (
           <Card className="p-6 bg-white border-slate-200 rounded-xl shadow-sm h-fit">
             <h2 className="text-base font-semibold text-slate-900 mb-5">Upload Document</h2>
@@ -175,20 +179,25 @@ function DocumentsInner() {
             <h2 className="text-base font-semibold text-slate-900">Documents</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="documents-table">
+            <table className="w-full text-sm table-fixed min-w-[760px]" data-testid="documents-table">
               <thead className="bg-slate-50 text-slate-500">
                 <tr className="text-left">
-                  {["Document Name", "Type", "Size", "Uploaded On", "Actions"].map((h) => (
-                    <th key={h} className="px-5 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
-                      {h}
-                    </th>
-                  ))}
+                  {isAdmin && (
+                    <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[22%]">Vendor</th>
+                  )}
+                  <th className={`px-5 py-3 font-semibold text-xs uppercase tracking-wide ${isAdmin ? "w-[28%]" : "w-[40%]"}`}>
+                    Document Name
+                  </th>
+                  <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[18%]">Type</th>
+                  <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[10%]">Size</th>
+                  <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[12%]">Uploaded</th>
+                  <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[14%]">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-5 py-14 text-center text-slate-400" data-testid="documents-empty">
+                    <td colSpan={isAdmin ? 6 : 5} className="px-5 py-14 text-center text-slate-400" data-testid="documents-empty">
                       {docs.isLoading ? "Loading…" : docs.isError ? "Could not load documents" : "No documents yet"}
                     </td>
                   </tr>
@@ -199,13 +208,21 @@ function DocumentsInner() {
                     className="border-t border-slate-100 hover:bg-slate-50/70 [transition:background-color_.18s_ease]"
                     data-testid={`document-row-${d.id}`}
                   >
-                    <td className="px-5 py-3.5 text-slate-900">{d.name}</td>
-                    <td className="px-5 py-3.5 text-slate-600 whitespace-nowrap">{d.doc_type}</td>
-                    <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">{prettySize(d.size)}</td>
-                    <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">
+                    {isAdmin && (
+                      <td className="px-5 py-3 truncate" data-testid={`document-vendor-${d.id}`}>
+                        <span className="block text-slate-900 truncate" title={d.vendor_name}>
+                          {d.vendor_name || "—"}
+                        </span>
+                        <span className="block font-mono text-[11px] text-[#1D4ED8]">{d.vendor_code}</span>
+                      </td>
+                    )}
+                    <td className="px-5 py-3 text-slate-900 truncate" title={d.name}>{d.name}</td>
+                    <td className="px-5 py-3 text-slate-600 truncate">{d.doc_type}</td>
+                    <td className="px-5 py-3 text-slate-500 whitespace-nowrap">{prettySize(d.size)}</td>
+                    <td className="px-5 py-3 text-slate-500 whitespace-nowrap">
                       {new Date(d.uploaded_at).toLocaleDateString("en-IN")}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-3">
                       <div className="flex gap-2">
                         {isAdmin && (
                           <Button
@@ -213,7 +230,7 @@ function DocumentsInner() {
                             size="sm"
                             data-testid={`document-download-${d.id}`}
                             onClick={() => downloadFile(`/api/documents/${d.id}/download`, d.name)}
-                            className="gap-1.5"
+                            className="h-8 gap-1.5"
                           >
                             <Download size={14} /> Download
                           </Button>
@@ -224,7 +241,7 @@ function DocumentsInner() {
                             size="sm"
                             data-testid={`document-delete-${d.id}`}
                             onClick={() => remove.mutate(d.id)}
-                            className="text-red-700 border-red-200 hover:bg-red-50"
+                            className="h-8 text-red-700 border-red-200 hover:bg-red-50"
                           >
                             <Trash2 size={14} />
                           </Button>

@@ -129,3 +129,7 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - `POST /api/auth/change-password` {current_password, new_password} for the signed-in user (min 6 chars).
 - UI: `/change-password` page ("Update Password" in sidebar), available to both admin and vendor.
 - Admin can still reset any user's password via `PATCH /api/users/{id}/password`.
+
+## Admin documents view (updated)
+- `GET /api/documents` now returns `vendor_code` + `vendor_name` (joined from vendors) so the admin table can show which vendor submitted each document.
+- Admin view: full-width fixed-layout table (Vendor | Document Name | Type | Size | Uploaded | Download), single-line truncation, no upload card. Vendor view: upload card + delete only (no download).

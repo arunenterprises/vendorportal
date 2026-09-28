@@ -161,6 +161,8 @@ class Bill(BaseModel):
 class DocumentOut(BaseModel):
     id: str
     vendor_id: str
+    vendor_code: str = ""
+    vendor_name: str = ""
     name: str
     doc_type: str
     content_type: str
