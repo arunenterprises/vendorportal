@@ -116,9 +116,9 @@ export default function Login() {
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="AE0001JV2627"
+                placeholder=""
                 data-testid="login-email-input"
-                autoComplete="username"
+                autoComplete="off"
               />
               <p className="text-xs text-slate-500">{t("vendor_code_hint")}</p>
             </div>
@@ -129,9 +129,9 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder=""
                 data-testid="login-password-input"
-                autoComplete="current-password"
+                autoComplete="new-password"
               />
             </div>
             <Button
