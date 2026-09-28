@@ -96,7 +96,8 @@ async def delete_document(doc_id: str, user=Depends(current_user)):
     doc = await db.documents.find_one({"id": doc_id}, {"_id": 0, "data_base64": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
-        raise HTTPException(status_code=403, detail="Not allowed")
+    # vendors may upload but never delete; only the admin can remove a document
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only the admin can delete documents")
     await db.documents.delete_one({"id": doc_id})
     return {"ok": True}

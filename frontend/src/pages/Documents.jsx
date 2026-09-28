@@ -235,7 +235,7 @@ function DocumentsInner() {
                             <Download size={14} /> Download
                           </Button>
                         )}
-                        {isVendor && (
+                        {isAdmin && (
                           <Button
                             variant="outline"
                             size="sm"
