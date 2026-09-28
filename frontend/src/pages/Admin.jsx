@@ -269,11 +269,18 @@ function AdminInner() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm" data-testid="admin-users-table">
+              <table className="w-full text-sm table-fixed" data-testid="admin-users-table">
                 <thead className="bg-slate-50 text-slate-500">
                   <tr className="text-left">
-                    {["email", "contact_person", "role", "vendor_code", "reset_password", "actions"].map((h) => (
-                      <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{t(h)}</th>
+                    {[
+                      ["email", "w-[26%]"],
+                      ["contact_person", "w-[18%]"],
+                      ["role", "w-[12%]"],
+                      ["vendor_code", "w-[14%]"],
+                      ["reset_password", "w-[20%]"],
+                      ["actions", "w-[10%]"],
+                    ].map(([h, w]) => (
+                      <th key={h} className={`px-4 py-3 font-semibold text-xs uppercase tracking-wide ${w}`}>{t(h)}</th>
                     ))}
                   </tr>
                 </thead>
@@ -285,8 +292,8 @@ function AdminInner() {
                   )}
                   {userRows.map((u) => (
                     <tr key={u.id} className="border-t border-slate-100" data-testid={`admin-user-row-${u.email}`}>
-                      <td className="px-4 py-3.5 text-slate-900">{u.email}</td>
-                      <td className="px-4 py-3.5 text-slate-700">{u.name}</td>
+                      <td className="px-4 py-3.5 text-slate-900 truncate" title={u.email}>{u.email}</td>
+                      <td className="px-4 py-3.5 text-slate-700 truncate" title={u.name}>{u.name}</td>
                       <td className="px-4 py-3.5">
                         <Badge variant="outline" className={u.role === "admin"
                           ? "bg-blue-50 text-blue-800 border-blue-200"

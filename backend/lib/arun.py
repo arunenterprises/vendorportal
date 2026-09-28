@@ -240,7 +240,11 @@ async def sync_from_arun() -> dict:
     logins = []
     for code, vendor in vendors_by_code.items():
         # every synced vendor gets a portal login: vendor code is BOTH the id and the password
-        email = vendor["email"] or f"{code.lower()}@arunenterprises.local"
+        raw_email = (vendor["email"] or "").strip().lower()
+        # upstream sometimes sends junk ("nil", "na", "-") — never use it as a unique login id
+        if "@" not in raw_email or raw_email in {"nil", "na", "n/a", "-", "none"}:
+            raw_email = ""
+        email = raw_email or f"{code.lower()}@arunenterprises.local"
         existing = await db.users.find_one({"vendor_id": vendor["id"]})
         if existing:
             await db.users.update_one(
@@ -248,6 +252,9 @@ async def sync_from_arun() -> dict:
                 {"$set": {"name": vendor["contact_person"] or vendor["company_name"]}},
             )
         else:
+            # another account already owns this email -> fall back to the code-based address
+            if await db.users.find_one({"email": email}):
+                email = f"{code.lower()}@arunenterprises.local"
             await db.users.insert_one({
                 "id": f"arun-user-{code}",
                 "email": email,

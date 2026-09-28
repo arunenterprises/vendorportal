@@ -133,3 +133,7 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 ## Admin documents view (updated)
 - `GET /api/documents` now returns `vendor_code` + `vendor_name` (joined from vendors) so the admin table can show which vendor submitted each document.
 - Admin view: full-width fixed-layout table (Vendor | Document Name | Type | Size | Uploaded | Download), single-line truncation, no upload card. Vendor view: upload card + delete only (no download).
+
+## Sync fix (workflow portal)
+- Upstream vendors sometimes send junk emails ("nil", "na", "-"). These are now ignored and replaced with `<vendorcode>@arunenterprises.local`, otherwise the unique email index raised E11000 and the sync returned 502 "Could not reach the workflow portal".
+- Existing bad user records were repaired in the DB.
