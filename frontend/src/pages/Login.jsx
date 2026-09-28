@@ -61,12 +61,19 @@ export default function Login() {
             </p>
           </div>
         </div>
-        <div className="relative max-w-md">
-          <h2 className="text-[40px] leading-[1.1] font-semibold text-white tracking-tight">
-            {t("login_brand_heading")}
+        <div className="relative max-w-xl mx-auto text-center">
+          <h2
+            className="font-heading text-white tracking-tight"
+            data-testid="login-brand-heading"
+          >
+            <span className="block text-[44px] leading-[1.05]">Vendor Portal</span>
+            <span className="block text-[26px] leading-[1.2] mt-2 text-blue-300 uppercase tracking-[0.08em]">
+              for Arun Enterprises
+            </span>
           </h2>
-          <p className="text-slate-300 mt-4 leading-relaxed">{t("login_sub")}</p>
-          <div className="grid grid-cols-3 gap-4 mt-10">
+          <span className="mt-5 block h-px w-24 mx-auto bg-gradient-to-r from-transparent via-[#1D4ED8] to-transparent" />
+          <p className="text-slate-300 mt-5 leading-relaxed">{t("login_sub")}</p>
+          <div className="grid grid-cols-3 gap-4 mt-10 text-left">
             {[
               { icon: FileCheck2, label: "Work Orders", value: "PO tracking" },
               { icon: TrendingUp, label: "Payments", value: "Live status" },
