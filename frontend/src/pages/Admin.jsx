@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
 import { formatINR, useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/useAuth";
 
 const EMPTY_USER = { email: "", name: "", role: "vendor", vendor_code: "", password: "" };
 const ROLE_LABELS = { vendor: "Vendor", admin: "Administrator" };
@@ -27,10 +28,12 @@ const ROLE_LABELS = { vendor: "Vendor", admin: "Administrator" };
 function AdminInner() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { user: me } = useAuth();
   const qc = useQueryClient();
   const [userOpen, setUserOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_USER);
   const [pwDraft, setPwDraft] = useState({});
+  const [pwUser, setPwUser] = useState(null);
 
   const users = useQuery({ queryKey: ["users"], queryFn: () => apiGet("/users"), retry: false });
   const vendors = useQuery({ queryKey: ["vendors"], queryFn: () => apiGet("/vendors"), retry: false });
@@ -72,6 +75,7 @@ function AdminInner() {
     onSuccess: () => {
       toast.success(t("password_reset_done"));
       setPwDraft({});
+      setPwUser(null);
     },
     onError: (e) => toast.error(e?.body?.detail || "Could not reset password"),
   });
@@ -158,14 +162,6 @@ function AdminInner() {
                 <p className="text-xs text-slate-500 mt-0.5">{t("users_note")}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/change-password")}
-                  data-testid="admin-update-password-button"
-                  className="gap-2 h-9"
-                >
-                  <KeyRound size={15} /> Update Password
-                </Button>
                 <Dialog open={userOpen} onOpenChange={setUserOpen}>
                 <DialogTrigger
                   render={
@@ -300,47 +296,101 @@ function AdminInner() {
                       </td>
                       <td className="px-4 py-3.5 font-mono text-xs text-[#1D4ED8]">{u.vendor_code || "—"}</td>
                       <td className="px-4 py-3.5">
-                        <div className="flex gap-1.5">
-                          <Input
-                            value={pwDraft[u.id] ?? ""}
-                            onChange={(e) => setPwDraft({ ...pwDraft, [u.id]: e.target.value })}
-                            placeholder={t("new_password")}
-                            data-testid={`admin-pw-input-${u.email}`}
-                            className="h-8 w-[130px] text-xs"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!(pwDraft[u.id] ?? "").trim()}
-                            onClick={() => resetPw.mutate({ id: u.id, password: pwDraft[u.id] })}
-                            data-testid={`admin-pw-save-${u.email}`}
-                            className="h-8 gap-1"
-                          >
-                            <KeyRound size={13} />
-                          </Button>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => removeUser.mutate(u.id)}
-                          data-testid={`admin-user-delete-${u.email}`}
-                          className="h-8 text-red-700 border-red-200 hover:bg-red-50"
+                          onClick={() => { setPwUser(u); setPwDraft({}); }}
+                          data-testid={`admin-update-password-${u.email}`}
+                          className="h-8 gap-1.5 text-xs"
                         >
-                          <Trash2 size={13} />
+                          <KeyRound size={13} /> Update Password
                         </Button>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => removeUser.mutate(u.id)}
+                            data-testid={`admin-user-delete-${u.email}`}
+                            className="h-8 text-red-700 border-red-200 hover:bg-red-50"
+                          >
+                            <Trash2 size={13} />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+            {/* Update password dialog (replaces the inline new-password field) */}
+            <Dialog open={!!pwUser} onOpenChange={(o) => { if (!o) setPwUser(null); }}>
+              <DialogContent className="bg-white sm:max-w-[420px]">
+                <DialogHeader>
+                  <DialogTitle>Update Password</DialogTitle>
+                  <DialogDescription>
+                    Set a new portal password for {pwUser?.email}
+                  </DialogDescription>
+                </DialogHeader>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const p = (pwDraft.new ?? "").trim();
+                    if (p.length < 6) {
+                      toast.error("Password must be at least 6 characters");
+                      return;
+                    }
+                    if (p !== (pwDraft.confirm ?? "").trim()) {
+                      toast.error("Passwords do not match");
+                      return;
+                    }
+                    resetPw.mutate({ id: pwUser.id, password: p });
+                  }}
+                  className="space-y-4"
+                  data-testid="admin-update-password-form"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="pw-new">New Password</Label>
+                    <Input
+                      id="pw-new"
+                      type="password"
+                      value={pwDraft.new ?? ""}
+                      onChange={(e) => setPwDraft({ ...pwDraft, new: e.target.value })}
+                      data-testid="admin-pw-new-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pw-confirm">Confirm New Password</Label>
+                    <Input
+                      id="pw-confirm"
+                      type="password"
+                      value={pwDraft.confirm ?? ""}
+                      onChange={(e) => setPwDraft({ ...pwDraft, confirm: e.target.value })}
+                      data-testid="admin-pw-confirm-input"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setPwUser(null)}>
+                      {t("cancel")}
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={resetPw.isPending}
+                      data-testid="admin-pw-save-button"
+                      className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white"
+                    >
+                      Update Password
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </Card>
         </TabsContent>
 
-        {/* ---------- read-only mirrors of the workflow portal ---------- */}
-        <TabsContent value="vendors">
+        {/* ---------- read-only mirrors of the workflow portal ---------- */}        <TabsContent value="vendors">
           <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-200">
               <h2 className="text-base font-semibold text-slate-900">{t("admin_vendors")}</h2>
