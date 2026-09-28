@@ -1,0 +1,132 @@
+{
+  "iteration": 1,
+  "summary": "All 8 acceptance-matrix criteria exercised: 7 backend pytest test files (15 test cases total, all passing) plus 9 named browser checks (all passing). No bugs found.",
+  "passed": 16,
+  "failed": 0,
+  "checks": [
+    {
+      "criterion": "Vendor logs in with email+password and lands on their dashboard",
+      "name": "vendor-login-dashboard-kpis",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Demo vendor login navigated to /dashboard; kpi-value-{total_billed,pending_payment,cleared_payment,active_orders} all rendered non-placeholder text."
+    },
+    {
+      "criterion": "Vendor sees ONLY their own work orders, bills and documents (multi-tenant isolation)",
+      "name": "vendor-multi-tenant-isolation",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "/work-orders shows exactly PO-2026-0001 & 0002 (2 rows), /bills shows exactly INV-2026-0001..0004 (4 rows); PO-2026-0003/INV-2026-0005/0006 absent."
+    },
+    {
+      "criterion": "Vendor sees ONLY their own work orders, bills and documents (multi-tenant isolation) - API",
+      "name": "test_tscheck_multi_tenant_isolation.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/work-orders and /api/bills as vendor@premier.in return only v-premier rows (seeded POs/invoices are a subset, Shakti's PO-2026-0003/INV-2026-0005/0006 absent); GET /api/work-orders/<shakti-wo-id> as premier vendor returns 403; GET /api/bills as admin includes both vendor_ids."
+    },
+    {
+      "criterion": "Vendor opens a work order detail and sees milestones plus itemized BOQ",
+      "name": "work-order-detail-milestones-boq",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "PO-2026-0001 detail page rendered 4 milestone-item rows and 2 work-order-item-row BOQ rows."
+    },
+    {
+      "criterion": "Vendor downloads a work order PDF and a GST tax invoice PDF",
+      "name": "vendor-pdf-downloads",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Clicking download-work-order-PO-2026-0001 triggered a download named containing 'PO-2026-0001'; clicking a download-bill-pdf-<inv> button triggered a download whose filename contains that invoice number."
+    },
+    {
+      "criterion": "Vendor downloads a work order PDF and a GST tax invoice PDF - API",
+      "name": "test_tscheck_pdf_downloads.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /api/work-orders/wo-1/pdf -> 200, content-type application/pdf, body starts with %PDF. GET /api/bills/<id>/pdf -> 200, content-type application/pdf, body starts with %PDF."
+    },
+    {
+      "criterion": "Vendor submits a new bill against a work order and the GST/TDS maths is correct",
+      "name": "vendor-submit-bill-gst-tds-math",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Submit New Bill dialog with taxable 300000 @ 18% created a row (5th bill row) showing total 348000, no manual reload."
+    },
+    {
+      "criterion": "Vendor submits a new bill against a work order and the GST/TDS maths is correct - API",
+      "name": "test_tscheck_bill_create_math.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/bills {taxable_amount:300000, gst_rate:18} -> 200, gst_amount 54000, tds_amount 6000, total_amount 348000, status 'pending'. PATCH /api/bills/<id>/status by vendor -> 403."
+    },
+    {
+      "criterion": "Vendor edits their Vendor Details and uploads a compliance document",
+      "name": "vendor-profile-edit-persists",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Updated contact_person/phone via vendor-profile-form, saved, reloaded page, inputs retained the new values."
+    },
+    {
+      "criterion": "Vendor edits their Vendor Details and uploads a compliance document (upload flow)",
+      "name": "vendor-document-upload",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Uploaded a small PDF via document-upload-form; a new document-row appeared showing the filename and doc type 'GST Certificate'."
+    },
+    {
+      "criterion": "Vendor edits their Vendor Details and uploads a compliance document - API",
+      "name": "test_tscheck_vendor_profile_update.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "PUT /api/vendors/v-premier with editable fields persists and is confirmed via a re-GET /api/vendors/me; posting gstin/pan/company_name is ignored (values unchanged)."
+    },
+    {
+      "criterion": "Vendor edits their Vendor Details and uploads a compliance document - documents API",
+      "name": "test_tscheck_documents_upload_download.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/documents (base64 PDF) -> 200, size matches byte length; GET /api/documents/<id>/download returns identical bytes. Admin POST /api/documents -> 400 'Only vendor accounts can upload documents'."
+    },
+    {
+      "criterion": "Admin reviews an invoice, records a UTR and updates payment status",
+      "name": "admin-review-invoice-mark-paid",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Created a fresh tscheck bill as vendor, then as admin drove it through Send to Review -> 'Under Finance Review', Reject -> 'Revision Needed', UTR + Mark Paid -> 'Paid/Settled', and confirmed the UTR value survives a page reload."
+    },
+    {
+      "criterion": "Admin reviews an invoice, records a UTR and updates payment status - API",
+      "name": "test_tscheck_admin_bill_status.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "PATCH /api/bills/<id>/status as admin: under_review -> 200, rejected -> 200, paid+utr -> 200 with utr='TSCHECKUTR001' and a non-empty paid_date."
+    },
+    {
+      "criterion": "Admin creates a vendor (with auto portal login) and issues a work order",
+      "name": "admin-add-vendor-and-issue-po",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Admin Vendor form created tscheck vendor row in admin-vendors-table; Issue Work Order dialog for that vendor produced a new admin-order-row-PO-2026-NNNN."
+    },
+    {
+      "criterion": "Admin creates a vendor (with auto portal login) and issues a work order - API",
+      "name": "test_tscheck_admin_vendor_and_workorder.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /api/vendors -> 200; fresh login with default password 'vendor123' -> 200, role 'vendor'. POST /api/work-orders -> 200 with a newly auto-generated po_number not previously present."
+    },
+    {
+      "criterion": "EN/HI toggle works and logout ends the session",
+      "name": "lang-toggle-and-logout",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "lang-toggle-hi switched nav labels to Hindi (डैशबोर्ड, कार्य आदेश), survived a reload; logout returned to /login; subsequent direct navigation to /bills redirected back to /login."
+    }
+  ],
+  "bugs": [],
+  "action_items": [
+    "Matrix has 8 criteria; several are compound (UI + API surface) so this iteration produced 9 browser checks + 7 backend test files = 16 lane artifacts, all passing."
+  ],
+  "retest_needed": false
+}

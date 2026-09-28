@@ -1,0 +1,118 @@
+{
+  "iteration": 2,
+  "summary": "Spec was fully rewritten since iteration_1 (read-only vendor/WO/bill data, login-only user management, no Hindi/no demo login, bug fixes for vendor-code login and admin login). Deleted all obsolete browser checks and backend tests from the previous spec and authored fresh artifacts for all 8 acceptance-matrix criteria: 7 backend pytest files (23 test cases, all passing) + 8 named browser checks (all passing). No bugs found.",
+  "passed": 15,
+  "failed": 0,
+  "checks": [
+    {
+      "criterion": "BUG FIX: vendor logs in with vendor code as both login ID and password",
+      "name": "vendor-login-dashboard-kpis",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Wrong password stayed on /login with an 'Invalid...' toast; lowercase 'ae0001jv2627' + AE0001JV2627 succeeded, landed on /dashboard; all 4 KPI cards rendered non-placeholder values (\u20b91.38L etc)."
+    },
+    {
+      "criterion": "BUG FIX: vendor logs in with vendor code as both login ID and password - API",
+      "name": "test_tscheck_vendor_login_bugfix.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /auth/login {AE0001JV2627/AE0001JV2627} -> 200 role=vendor; lowercase variant -> 200; wrong password -> 401; GET /summary as vendor -> total_billed > 0."
+    },
+    {
+      "criterion": "BUG FIX: admin logs in with email + password",
+      "name": "admin-login-command-center",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "arunenterprises2023@gmail.com / Arun2023@12 landed on /admin, admin-tabs visible."
+    },
+    {
+      "criterion": "BUG FIX: admin logs in with email + password - API",
+      "name": "test_tscheck_admin_login_bugfix.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /auth/login with admin creds -> 200 role=admin; wrong password -> 401."
+    },
+    {
+      "criterion": "Hindi is removed everywhere and there are no demo one-click login buttons",
+      "name": "no-lang-toggle-no-demo-login",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "No lang-toggle-en/hi or login-lang-toggle-* elements on /login or post-login; no demo-login-* elements; no Devanagari characters found in page innerText before or after login."
+    },
+    {
+      "criterion": "This portal creates ONLY users (vendor dup rejected, admin create/reset/delete, unsynced code errors mentioning sync)",
+      "name": "admin-create-user-flow",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Create User with role=vendor + existing code AE0001JV2627 showed 'already exists' error; created admin user tscheck-admin-<ts>@example.com, row appeared in admin-users-table; reset password showed 'Password updated' toast; delete removed the row."
+    },
+    {
+      "criterion": "This portal creates ONLY users - API",
+      "name": "test_tscheck_admin_creates_only_users.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /users role=vendor code=AE0001JV2627 -> 400 'A login already exists...'; unsynced code ZZ9999NOTREAL -> 404 mentioning 'Press Sync from Workflow Portal'; admin create/reset-login/delete round-trip -> 200s; vendor POST /users -> 403."
+    },
+    {
+      "criterion": "Vendor/work-order/bill data is READ ONLY -- no create or edit UI anywhere",
+      "name": "read-only-no-create-edit-ui",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "/bills has no 'Submit New Bill' text; /vendor-profile has zero <input> elements and no Save text; /admin has no 'Add Vendor'/'Issue Work Order' text and admin-bills-table has no Mark Paid/Send to Review/Reject text."
+    },
+    {
+      "criterion": "Vendor/work-order/bill data is READ ONLY - backend route removal",
+      "name": "test_tscheck_read_only_no_create_edit.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /vendors -> 405; POST /work-orders -> 405; POST /bills -> 405; PATCH /bills/<id>/status -> 404."
+    },
+    {
+      "criterion": "Real data fetched from the Arun workflow portal is visible and correctly mapped",
+      "name": "vendor-data-real-mapping",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "/work-orders shows exactly 1 row P00020 'SUPPLY OF JSPL MS ANGLE 40x40x6' \u20b91,38,036.40; detail page shows 3 milestone-item rows and 3 work-order-item-row BOQ rows; /bills row BILL00042627 shows ref AE00042627, taxable 1,16,980.00, GST 21,056.40, total 1,38,036.40, 'Under Finance Review'; /vendor-profile shows Annapurna Steels / AE0001JV2627 / 09BUHPS9363N1ZJ / BUHPS9363N / HDFC0000298."
+    },
+    {
+      "criterion": "Real data fetched from the Arun workflow portal is visible and correctly mapped - API",
+      "name": "test_tscheck_real_data_mapping.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /work-orders (vendor) -> 1 row matching po_number/title/value/3 milestones/3 items; GET /bills -> 1 row matching invoice_no/ref_no/taxable/gst/total/status; GET /vendors/me matches company/code/gstin/pan/ifsc."
+    },
+    {
+      "criterion": "Admin can re-sync from the workflow portal and it is idempotent",
+      "name": "admin-sync-idempotent",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Linked-record banner showed 1/1/1 before and after clicking Sync from Workflow Portal; a success toast appeared; admin-vendor-row/-order-row/-bill-row counts stayed at 1 each after sync."
+    },
+    {
+      "criterion": "Admin can re-sync from the workflow portal and it is idempotent - API",
+      "name": "test_tscheck_sync_idempotent.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /sync/arun as vendor -> 403; GET /sync/status -> linked_vendors/linked_work_orders/linked_bills all = 1; re-running POST /sync/arun then re-checking counts and GET /vendors, /work-orders, /bills all stayed at exactly 1 row."
+    },
+    {
+      "criterion": "PDF downloads work and multi-tenant isolation holds",
+      "name": "vendor-pdf-downloads",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "download-work-order-P00020 triggered a download named 'P00020...pdf'; download-bill-pdf-BILL00042627 triggered a download named 'BILL00042627...pdf'; after Logout, direct navigation to /bills redirected back to /login."
+    },
+    {
+      "criterion": "PDF downloads work and multi-tenant isolation holds - API",
+      "name": "test_tscheck_pdf_and_auth_isolation.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /bills/<id>/pdf and /work-orders/<id>/pdf -> 200, content-type application/pdf, body starts with %PDF; unauthenticated GET /bills (no cookie) -> 401."
+    }
+  ],
+  "bugs": [],
+  "action_items": [
+    "Matrix has 8 criteria, each compound (UI + API surface), producing 8 browser checks + 7 backend test files = 15 lane artifacts, all passing. Previous iteration's checks/tests targeted an old spec (create/edit bills, add-vendor, lang toggle, multi-vendor data) that no longer matches the app; those artifacts were deleted and replaced."
+  ],
+  "retest_needed": false
+}

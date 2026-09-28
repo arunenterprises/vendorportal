@@ -1,0 +1,81 @@
+{
+  "iteration": 3,
+  "summary": "Retest of the 4-criterion briefing (status-label bug fix, PDF single-page/no-remarks, login credential confirmation, filter tabs off internal bucket). All 8 pre-existing backend tests + 8 pre-existing browser checks from iteration_2 re-ran clean (one stale assertion in vendor-data-real-mapping expecting the old generic 'Under Finance Review' wording was updated to the new real wording per the spec_deviations note). Added 1 new backend test file (2 new test cases + 1 auth-failure case) for status_label + PDF page-count/size/text content, and 3 new browser checks: bill-status-label-real-wording (dashboard/bills/admin all show the real wording), bill-status-filter-tabs-use-internal-bucket (filter tabs still key off the internal bucket), and vendor-login-via-public-url (login through the public APP_URL ingress). No bugs found; everything matches the acceptance matrix and spec_deviations exactly.",
+  "passed": 20,
+  "failed": 0,
+  "checks": [
+    {
+      "criterion": "BUG FIX: a synced bill shows the workflow portal's EXACT status wording, not a generic bucket label",
+      "name": "test_tscheck_bill_status_label_and_pdf.py::test_bill_status_label_matches_upstream_wording",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /bills (vendor) -> BILL00042627 has status='under_review', approval_status='Approved For Payment', final_release_status='Added to Due List (Unpaid)', status_label=='Added to Due List (Unpaid)' (asserted != 'Under Finance Review')."
+    },
+    {
+      "criterion": "BUG FIX: a synced bill shows the workflow portal's EXACT status wording, not a generic bucket label",
+      "name": "bill-status-label-real-wording",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "As vendor: dashboard-bill-row-BILL00042627 and bill-row-BILL00042627 both show 'Added to Due List (Unpaid)' and NOT 'Under Finance Review'. As admin on Bills & Invoices tab: admin-bill-row-BILL00042627 shows the same real wording."
+    },
+    {
+      "criterion": "The bill PDF prints that same real status and stays a clean single-page A4",
+      "name": "test_tscheck_bill_status_label_and_pdf.py::test_bill_pdf_is_single_page_a4_with_real_status_no_remarks",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /bills/<id>/pdf -> 200, content-type application/pdf, body starts b'%PDF'; pypdf: 1 page, mediabox 595.28x841.89pt (A4); extracted text contains 'Added to Due List (Unpaid)' and does not contain 'Remarks:'."
+    },
+    {
+      "criterion": "BUG FIX: both documented logins work through the public URL",
+      "name": "test_tscheck_vendor_login_bugfix.py + test_tscheck_admin_login_bugfix.py + test_bill_status_label_and_pdf::test_wrong_password_rejected_401",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /auth/login {AE0001JV2627/AE0001JV2627} -> 200 role=vendor; {arunenterprises2023@gmail.com/Arun2023@12} -> 200 role=admin; wrong password -> 401. All 26 backend tests pass (`python -m pytest -q` = '26 passed')."
+    },
+    {
+      "criterion": "BUG FIX: both documented logins work through the public URL",
+      "name": "vendor-login-dashboard-kpis",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran persisted check on localhost: wrong password stayed on /login with error toast; AE0001JV2627/AE0001JV2627 reached /dashboard with populated KPIs."
+    },
+    {
+      "criterion": "BUG FIX: both documented logins work through the public URL",
+      "name": "admin-login-command-center",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran persisted check on localhost: arunenterprises2023@gmail.com/Arun2023@12 reached /admin, admin tabs visible."
+    },
+    {
+      "criterion": "BUG FIX: both documented logins work through the public URL - verified through the public ingress URL",
+      "name": "vendor-login-via-public-url",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Ran against APP_URL https://vendor-portal-458.preview.emergentagent.com: vendor code login reached /dashboard with kpi-value-total_billed visible."
+    },
+    {
+      "criterion": "Status filter tabs still work off the internal bucket even though the label is custom",
+      "name": "bill-status-filter-tabs-use-internal-bucket",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "bills-filter-under_review -> bill-row-BILL00042627 visible showing 'Added to Due List (Unpaid)'; bills-filter-paid -> row not visible; bills-filter-rejected -> row not visible."
+    },
+    {
+      "criterion": "Regression: real data mapping check updated for the new status wording",
+      "name": "vendor-data-real-mapping",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Fixed stale assertion (was expecting old 'Under Finance Review' bucket text on bill-row-BILL00042627); now asserts 'Added to Due List (Unpaid)' per spec_deviations. Work-order and vendor-profile mapping assertions unchanged and passing."
+    },
+    {
+      "criterion": "Regression: remaining iteration_2 artifacts unaffected by this change",
+      "name": "admin-create-user-flow, admin-sync-idempotent, no-lang-toggle-no-demo-login, read-only-no-create-edit-ui, vendor-pdf-downloads, test_tscheck_admin_creates_only_users.py, test_tscheck_read_only_no_create_edit.py, test_tscheck_real_data_mapping.py, test_tscheck_sync_idempotent.py, test_tscheck_pdf_and_auth_isolation.py",
+      "lane": "browser+backend",
+      "status": "passed",
+      "evidence": "All re-ran by name unchanged and passed; full backend suite = '26 passed in 4.67s'."
+    }
+  ],
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false
+}

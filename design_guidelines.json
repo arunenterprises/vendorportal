@@ -1,0 +1,213 @@
+{
+  "theme_strategy": {
+    "theme_mode": "light",
+    "archetype": "SWISS & HIGH-CONTRAST + INDUSTRIAL PRECISION",
+    "brand_essence": "NexVend Enterprise Cloud - Robust B2B Indian Enterprise Vendor Ecosystem with Deep Navy (#0F172A), Vivid Precision Indigo-Cobalt (#2563EB / #1D4ED8), Warm Amber (#D97706), and Crisp Steel (#F8FAFC / #FFFFFF)",
+    "language_support": "Dual Language Support: English (EN) and Hindi (HI / हिंदी) with instant top-bar toggle storing preference in localStorage"
+  },
+  "colors": {
+    "surfaces": [
+      {
+        "name": "page",
+        "kind": "solid",
+        "bg": "#F8FAFC",
+        "on_bg": "#0F172A",
+        "on_bg_muted": "#475569",
+        "roles": {
+          "link": "#1D4ED8",
+          "error": "#B91C1C",
+          "success": "#047857",
+          "warning": "#B45309"
+        }
+      },
+      {
+        "name": "panel",
+        "kind": "solid",
+        "bg": "#FFFFFF",
+        "on_bg": "#0F172A",
+        "on_bg_muted": "#64748B",
+        "roles": {
+          "link": "#1D4ED8",
+          "error": "#B91C1C",
+          "success": "#047857",
+          "warning": "#B45309"
+        }
+      },
+      {
+        "name": "sidebar_dark",
+        "kind": "solid",
+        "bg": "#0B132B",
+        "on_bg": "#F8FAFC",
+        "on_bg_muted": "#94A3B8",
+        "roles": {
+          "link": "#60A5FA",
+          "error": "#FCA5A5",
+          "success": "#6EE7B7",
+          "warning": "#FCD34D"
+        }
+      },
+      {
+        "name": "hero_auth_banner",
+        "kind": "solid",
+        "bg": "#0F172A",
+        "on_bg": "#FFFFFF",
+        "on_bg_muted": "#CBD5E1",
+        "roles": {
+          "link": "#93C5FD",
+          "error": "#FCA5A5",
+          "success": "#86EFAC",
+          "warning": "#FDE047"
+        }
+      },
+      {
+        "name": "status_badge_paid",
+        "kind": "solid",
+        "bg": "#ECFDF5",
+        "on_bg": "#065F46",
+        "on_bg_muted": "#047857"
+      },
+      {
+        "name": "status_badge_pending",
+        "kind": "solid",
+        "bg": "#FFFBEB",
+        "on_bg": "#92400E",
+        "on_bg_muted": "#B45309"
+      },
+      {
+        "name": "status_badge_rejected",
+        "kind": "solid",
+        "bg": "#FEF2F2",
+        "on_bg": "#991B1B",
+        "on_bg_muted": "#B91C1C"
+      },
+      {
+        "name": "status_badge_processing",
+        "kind": "solid",
+        "bg": "#EFF6FF",
+        "on_bg": "#1E40AF",
+        "on_bg_muted": "#1D4ED8"
+      }
+    ],
+    "accent": "#1D4ED8",
+    "on_accent": "#FFFFFF",
+    "brand_amber": "#D97706",
+    "brand_navy": "#0B132B",
+    "border_subtle": "#E2E8F0",
+    "border_active": "#CBD5E1"
+  },
+  "typography": {
+    "font_family_heading": "Outfit, 'Plus Jakarta Sans', sans-serif",
+    "font_family_body": "Plus Jakarta Sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    "font_family_mono": "'IBM Plex Mono', 'JetBrains Mono', monospace",
+    "font_import_instruction": "Use preinstalled @fontsource-variable/outfit and @fontsource-variable/plus-jakarta-sans in frontend/src/index.css",
+    "scale_px": {
+      "display": 56,
+      "h1": 40,
+      "h2": 30,
+      "h3": 22,
+      "body": 16,
+      "caption": 14
+    },
+    "letter_spacing": {
+      "display": "-0.03em",
+      "h1": "-0.025em",
+      "h2": "-0.02em",
+      "overline": "0.15em"
+    }
+  },
+  "entry_surfaces": {
+    "/": "split layout — Left branded industrial cloud panel with real-time stats & compliance badges, Right interactive tabbed enterprise login (Vendor / Admin quick switch) with role demo prefill",
+    "/login": "split layout — Left dark navy command preview with company credentials & security lock, Right unified authentication form with language switch",
+    "/dashboard": "top persistent command bar + left deep-navy navigation + dense 4-column KPI overview (Pending Bills, Active Work Orders, Paid Amount INR, Compliance Health) + quick actions",
+    "/work-orders": "data-dense filterable table with PO number, Project title, Scope, Value, Milestone progress bar, and PDF export action",
+    "/work-orders/:id": "structured detail view with milestone checklist, itemized BOQ (Bill of Quantities), deliverable attachments, and PO print/download trigger",
+    "/bills": "financial ledger view with invoice number, GSTIN, taxable amount, TDS deducted, payment status pipeline, and GST compliant PDF download",
+    "/vendor-profile": "verified company dossier with GST, PAN, MSME, Bank details (IFSC/Account), compliance certificates upload & verification badge",
+    "/admin": "procurement admin control tower with vendor directory management, create work order modal, approve/reject invoice workflow, and audit trail"
+  },
+  "grids_and_layouts": {
+    "layout_structure": "Enterprise Hybrid: Persistent Top Utility Bar (Language Toggle EN/HI, Company Name, Role Badge, Notifications, User Menu) + Sticky Left Sidebar (Navigation, Verified KYC pill, Quick Help) + High Density Content Zone",
+    "bento_dashboard": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5",
+    "table_container": "bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden",
+    "spacing_scale": "Tailwind p-4, p-6, p-8, p-10 with generous gutters (gap-5 or gap-6) for high data density without visual clutter"
+  },
+  "bilingual_localization_guide": {
+    "key_translations": {
+      "nav_dashboard": {"en": "Dashboard", "hi": "डैशबोर्ड"},
+      "nav_work_orders": {"en": "Work Orders", "hi": "कार्य आदेश (Work Orders)"},
+      "nav_bills_invoices": {"en": "Bills & Invoices", "hi": "बिल एवं इनवॉइस"},
+      "nav_vendor_profile": {"en": "Vendor Profile", "hi": "विक्रेता प्रोफ़ाइल"},
+      "nav_documents": {"en": "Compliance & Docs", "hi": "दस्तावेज़ एवं प्रमाण-पत्र"},
+      "nav_admin_panel": {"en": "Admin Command Center", "hi": "प्रशासन नियंत्रण कक्ष"},
+      "stat_total_billed": {"en": "Total Billed Amount", "hi": "कुल बिल राशि"},
+      "stat_pending_payment": {"en": "Payment Pending", "hi": "लंबित भुगतान"},
+      "stat_active_orders": {"en": "Active Work Orders", "hi": "सक्रिय कार्य आदेश"},
+      "stat_paid_cleared": {"en": "Cleared Payments", "hi": "स्वीकृत एवं भुगतान राशि"},
+      "btn_download_pdf": {"en": "Download Invoice PDF", "hi": "पीडीएफ इनवॉइस डाउनलोड करें"},
+      "btn_download_po": {"en": "Download Work Order", "hi": "कार्य आदेश डाउनलोड करें"},
+      "btn_create_bill": {"en": "Submit New Bill", "hi": "नया बिल जमा करें"},
+      "btn_create_po": {"en": "Issue Work Order", "hi": "नया वर्क आर्डर बनाएं"},
+      "status_paid": {"en": "Paid / Settled", "hi": "भुगतान संपन्न"},
+      "status_pending": {"en": "Pending Approval", "hi": "मंजूरी लंबित"},
+      "status_under_review": {"en": "Under Finance Review", "hi": "वित्तीय समीक्षाधीन"},
+      "status_rejected": {"en": "Revision Needed", "hi": "पुनरीक्षण आवश्यक"}
+    }
+  },
+  "image_urls": {
+    "auth_hero_background": {
+      "url": "https://images.unsplash.com/photo-1786026632790-1f228b894919?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwzfHxpbmR1c3RyaWFsJTIwZW50ZXJwcmlzZSUyMGxvZ2lzdGljcyUyMHdhcmVob3VzZSUyMHdvcmtlcnxlbnwwfHx8fDE3OTA1OTI2NzZ8MA&ixlib=rb-4.1.0&q=85",
+      "category": "Hero Banner Image",
+      "description": "Modern automated industrial logistics and enterprise procurement storage system",
+      "usage": "Used in the Left split panel of the Login/Landing page with a deep navy gradient overlay (bg-slate-900/80)"
+    },
+    "factory_operations_thumbnail": {
+      "url": "https://images.unsplash.com/photo-1730584475692-b4199b346653?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHw0fHxpbmR1c3RyaWFsJTIwZW50ZXJwcmlzZSUyMGxvZ2lzdGljcyUyMHdhcmVob3VzZSUyMHdvcmtlcnxlbnwwfHx8fDE3OTA1OTI2NzZ8MA&ixlib=rb-4.1.0&q=85",
+      "category": "Work Order Context Image",
+      "description": "Engineers and industrial specialists executing fabrication work order",
+      "usage": "Work order visual preview and project header banner"
+    },
+    "vendor_avatar_sample_1": {
+      "url": "https://images.unsplash.com/photo-1560250097-0b93528c311a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzR8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMGV4ZWN1dGl2ZSUyMHBvcnRyYWl0fGVufDB8fHx8MTc5MDU5MjY3Nnww&ixlib=rb-4.1.0&q=85",
+      "category": "Vendor Representative Avatar",
+      "description": "Male corporate vendor authorized signatory portrait",
+      "usage": "Vendor Profile signatory and Admin Vendor directory"
+    },
+    "procurement_officer_avatar": {
+      "url": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzR8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMGV4ZWN1dGl2ZSUyMHBvcnRyYWl0fGVufDB8fHx8MTc5MDU5MjY3Nnww&ixlib=rb-4.1.0&q=85",
+      "category": "Admin Procurement Lead Avatar",
+      "description": "Female enterprise procurement director portrait",
+      "usage": "Admin profile and PO issuing authority badge"
+    }
+  },
+  "motion": {
+    "page_transitions": "Subtle opacity and slight y-axis slide (initial: { opacity: 0, y: 6 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25, ease: 'easeOut' })",
+    "card_hover": "transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; hover:-translate-y-0.5 hover:shadow-md",
+    "button_press": "active:scale-[0.98] transition: transform 0.1s ease",
+    "reduced_motion": "Wrap animations with respect to prefers-reduced-motion media query"
+  },
+  "accessibility": {
+    "wcag_compliance": "WCAG 2.1 AA with strict minimum 4.5:1 text contrast for body and 3:1 for large graphical titles",
+    "test_attributes": "Every interactive button, table row action, modal trigger, tab, and input MUST have a dedicated `data-testid` attribute (e.g., data-testid='login-submit-button', data-testid='lang-toggle-hi', data-testid='work-order-row-PO-2026-001', data-testid='download-bill-pdf-btn')",
+    "keyboard_nav": "Full focus-visible ring styles (focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none)"
+  },
+  "pdf_and_export_strategy": {
+    "approach": "Professional client-side branded PDF generator for Invoices and Work Orders using modern printable CSS templates or dynamic HTML2Canvas / jspdf / native browser printable iframe format, complete with Company Header, GSTIN, HSN/SAC codes, Tax breakdown (CGST/SGST/IGST), Authorized Signatures, and Bank details",
+    "print_styling": "Provide dedicated @media print CSS rules for clean borderless high-resolution A4 tax invoice printouts"
+  },
+  "instructions_to_main_agent": [
+    "Build the complete B2B Enterprise Cloud Vendor Portal with seamless switching between Vendor Portal and Admin Command Center.",
+    "Support dual language (English & Hindi) across all pages, navigation, tables, tooltips, and status tags using a clean context/state dictionary.",
+    "Implement demo instant-login buttons for 'Vendor: Premier Industrial Supplies' and 'Admin: Enterprise Procurement Officer' so anyone can test both workflows with 1 click.",
+    "Vendor workflow: View assigned Work Orders, Milestone tracking, Submit & View Invoices, Check Live Payment Status (Paid, In Review, Scheduled, Rejected), Download PDF Tax Invoices & Purchase Orders, Manage Vendor Profile & Upload Compliance docs (GST, MSME, Bank Cancelled Cheque).",
+    "Admin workflow: Manage Vendors list, Issue new Work Orders (with itemized deliverables), Review submitted Bills, Approve/Reject payments with remarks, Update payment transaction IDs (UTR number) and payout dates.",
+    "Include rich pre-seeded mock Indian enterprise data: INR (₹) currency formatting, realistic GSTIN numbers, HSN/SAC codes, milestone timelines, and mock downloadable PDF invoices.",
+    "Ensure 100% responsiveness on mobile, tablet, and wide desktop screens, with custom styled data tables, search filters, status filter tabs, and rich toast alerts via Sonner.",
+    "Use data-testid on all interactive elements as strictly mandated."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": {
+    "design_purity": "Avoid generic AI slop. Use authoritative industrial typography (Outfit + Plus Jakarta Sans), high contrast deep navy sidebars, clean crisp white cards with 1px border-slate-200, and vivid status indicators.",
+    "no_universal_transition": "Never use `transition: all`. Target specific properties like `opacity`, `transform`, `background-color`.",
+    "no_transparent_overlays": "Never use transparent backgrounds on modals, dropdowns, sticky headers, or sidebars. Always specify crisp backdrop blur or solid white / dark slate backgrounds.",
+    "toasts": "Use `sonner` via `@/components/ui/sonner.jsx` for all notifications (invoice submission, status changes, PDF generation, profile updates)."
+  }
+}

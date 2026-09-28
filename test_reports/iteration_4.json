@@ -1,0 +1,74 @@
+{
+  "iteration": 4,
+  "summary": "Retest of the 4-criterion briefing (vendor sidebar firm-identity bug fix, dashboard subtitle firm identity, admin identity unaffected, login-error vendor-code-rule bug fix). Backend suite grew from 26 to 28 passing tests (added test_tscheck_login_error_vendor_code_rule.py). Added 4 new browser checks for the new criteria, all passing. Re-ran all 9 pre-existing browser checks by name: 8 passed clean, admin-create-user-flow failed once on a toast-overlay pointer-interception timing issue and passed clean on immediate rerun -> classified flaky, not a bug (pre-existing check, unrelated to this change set). No bugs found.",
+  "passed": 13,
+  "failed": 0,
+  "checks": [
+    {
+      "criterion": "BUG FIX: vendor sidebar shows FIRM name/email, not contact person",
+      "name": "sidebar-vendor-firm-identity",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Logged in as AE0001JV2627/AE0001JV2627: sidebar-user-name='Annapurna Steels', sidebar-user-email='annapurnasteels8@gmail.com', sidebar-vendor-code='AE0001JV2627', sidebar-contact-person='Contact: Ragvendra Singh'."
+    },
+    {
+      "criterion": "Vendor dashboard subtitle identifies the firm rather than the contact person",
+      "name": "dashboard-subtitle-shows-firm",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "On /dashboard, subtitle text contains 'Annapurna Steels' and 'AE0001JV2627'; text matching /Ragvendra Singh \u00b7 Vendor/ has 0 matches."
+    },
+    {
+      "criterion": "Admin identity display is unaffected",
+      "name": "admin-sidebar-identity-unaffected",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Logged in as arunenterprises2023@gmail.com/Arun2023@12: sidebar-user-name='Arun Enterprises', sidebar-user-email='arunenterprises2023@gmail.com', sidebar-vendor-code and sidebar-contact-person both have count 0; /admin loaded."
+    },
+    {
+      "criterion": "BUG FIX: login failure message names the vendor-code rule (frontend toast)",
+      "name": "login-error-mentions-vendor-code-rule",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Wrong password for AE0001JV2627 kept user on /login and showed toast containing 'vendor code' and 'BOTH the ID and the password'; correct password then reached /dashboard."
+    },
+    {
+      "criterion": "BUG FIX: login failure message names the vendor-code rule (backend 401 detail)",
+      "name": "test_tscheck_login_error_vendor_code_rule.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "POST /auth/login {AE0001JV2627/WrongPassword123} -> 401, detail='Invalid vendor code / email or password' (contains 'vendor code' and 'password'); POST with correct password AE0001JV2627/AE0001JV2627 -> 200, role='vendor'. Full suite: '28 passed'."
+    },
+    {
+      "criterion": "Regression: pre-existing bill status label / PDF criteria unaffected",
+      "name": "bill-status-label-real-wording, bill-status-filter-tabs-use-internal-bucket, vendor-pdf-downloads",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran by name: real wording shown on dashboard/bills/admin, filter tabs key off internal bucket, PDF download flow unaffected."
+    },
+    {
+      "criterion": "Regression: admin command-center, sync idempotency, i18n/no-demo-login, read-only UI, real data mapping, public-URL login unaffected",
+      "name": "admin-login-command-center, admin-sync-idempotent, no-lang-toggle-no-demo-login, read-only-no-create-edit-ui, vendor-data-real-mapping, vendor-login-dashboard-kpis, vendor-login-via-public-url",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "All 7 re-ran by name and passed clean, no assertion changes needed."
+    },
+    {
+      "criterion": "Regression: admin create/delete portal-user flow",
+      "name": "admin-create-user-flow",
+      "lane": "browser",
+      "status": "flaky",
+      "evidence": "First rerun: delete-button click timed out because a success toast ('Portal user created: ...') visually overlapped the button for >30s (pointer-events interception), not an app defect. Immediate rerun: passed clean, user created then deleted successfully. Classified flaky per rerun-before-classify rule; not counted as failed/bug."
+    },
+    {
+      "criterion": "Backend regression: full pre-existing suite (26 tests from iteration_3)",
+      "name": "pytest tests/ (excluding new file)",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "`cd /app/backend && python -m pytest -q` -> '28 passed in 4.71s' (26 pre-existing + 2 new in test_tscheck_login_error_vendor_code_rule.py)."
+    }
+  ],
+  "bugs": [],
+  "action_items": [],
+  "retest_needed": false
+}

@@ -1,0 +1,449 @@
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Building2, KeyRound, RefreshCw, Trash2, UserPlus } from "lucide-react";
+import AppLayout from "@/components/AppLayout";
+import RequireAuth from "@/components/RequireAuth";
+import StatusBadge from "@/components/StatusBadge";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
+import { formatINR, useI18n } from "@/lib/i18n";
+
+const EMPTY_USER = { email: "", name: "", role: "vendor", vendor_code: "", password: "" };
+const ROLE_LABELS = { vendor: "Vendor", admin: "Administrator" };
+
+function AdminInner() {
+  const { t } = useI18n();
+  const qc = useQueryClient();
+  const [userOpen, setUserOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_USER);
+  const [pwDraft, setPwDraft] = useState({});
+
+  const users = useQuery({ queryKey: ["users"], queryFn: () => apiGet("/users"), retry: false });
+  const vendors = useQuery({ queryKey: ["vendors"], queryFn: () => apiGet("/vendors"), retry: false });
+  const bills = useQuery({ queryKey: ["bills"], queryFn: () => apiGet("/bills"), retry: false });
+  const orders = useQuery({ queryKey: ["work-orders"], queryFn: () => apiGet("/work-orders"), retry: false });
+  const syncInfo = useQuery({ queryKey: ["sync-status"], queryFn: () => apiGet("/sync/status"), retry: false });
+
+  const userRows = users.isError ? [] : users.data ?? [];
+  const vendorRows = vendors.isError ? [] : vendors.data ?? [];
+  const billRows = bills.isError ? [] : bills.data ?? [];
+  const orderRows = orders.isError ? [] : orders.data ?? [];
+
+  const runSync = useMutation({
+    mutationFn: () => apiPost("/sync/arun"),
+    onSuccess: (r) => {
+      ["vendors", "bills", "work-orders", "summary", "sync-status", "users"].forEach((k) =>
+        qc.invalidateQueries({ queryKey: [k] }),
+      );
+      toast.success(
+        `${t("sync_done")}: ${r.vendors} vendors · ${r.work_orders} work orders · ${r.bills} bills`,
+      );
+    },
+    onError: (e) => toast.error(e?.body?.detail || t("sync_failed")),
+  });
+
+  const createUser = useMutation({
+    mutationFn: (payload) => apiPost("/users", payload),
+    onSuccess: (u) => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      toast.success(`${t("user_created")}: ${u.email}`);
+      setUserOpen(false);
+      setForm(EMPTY_USER);
+    },
+    onError: (e) => toast.error(e?.body?.detail || t("user_create_failed")),
+  });
+
+  const resetPw = useMutation({
+    mutationFn: ({ id, password }) => apiPatch(`/users/${id}/password`, { password }),
+    onSuccess: () => {
+      toast.success(t("password_reset_done"));
+      setPwDraft({});
+    },
+    onError: (e) => toast.error(e?.body?.detail || "Could not reset password"),
+  });
+
+  const removeUser = useMutation({
+    mutationFn: (id) => apiDelete(`/users/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      toast.success(t("user_deleted"));
+    },
+    onError: (e) => toast.error(e?.body?.detail || "Could not delete user"),
+  });
+
+  function submitUser(e) {
+    e.preventDefault();
+    if (!form.email.trim()) {
+      toast.error(t("required_fields"));
+      return;
+    }
+    if (form.role === "vendor" && !form.vendor_code.trim()) {
+      toast.error(t("vendor_code_required"));
+      return;
+    }
+    if (form.role === "admin" && !form.password.trim()) {
+      toast.error(t("password_required_admin"));
+      return;
+    }
+    createUser.mutate({
+      email: form.email.trim(),
+      name: form.name.trim(),
+      role: form.role,
+      vendor_code: form.vendor_code.trim() || null,
+      password: form.password.trim() || null,
+    });
+  }
+
+  const linked = syncInfo.isError ? null : syncInfo.data;
+
+  return (
+    <AppLayout
+      title={t("nav_admin")}
+      subtitle={t("admin_subtitle")}
+      action={
+        <Button
+          onClick={() => runSync.mutate()}
+          disabled={runSync.isPending}
+          data-testid="admin-sync-arun-button"
+          className="bg-[#D97706] hover:bg-[#B45309] text-white gap-2 active:scale-[0.98] [transition:background-color_.18s_ease,transform_.1s_ease]"
+        >
+          <RefreshCw size={15} className={runSync.isPending ? "animate-spin" : ""} />
+          {runSync.isPending ? t("syncing") : t("sync_arun")}
+        </Button>
+      }
+    >
+      {/* linked-records banner */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+        {[
+          { key: "linked_vendors", label: t("nav_profile"), value: linked?.linked_vendors },
+          { key: "linked_work_orders", label: t("nav_work_orders"), value: linked?.linked_work_orders },
+          { key: "linked_bills", label: t("nav_bills"), value: linked?.linked_bills },
+          { key: "portal_users", label: t("nav_users"), value: userRows.length },
+        ].map((s) => (
+          <Card key={s.key} className="p-4 bg-white border-slate-200 rounded-xl shadow-sm" data-testid={`admin-stat-${s.key}`}>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-slate-500 font-semibold">{s.label}</p>
+            <p className="text-2xl font-semibold text-slate-900 mt-1.5">{s.value ?? "—"}</p>
+          </Card>
+        ))}
+      </div>
+
+      <Tabs defaultValue="users">
+        <TabsList className="mb-6" data-testid="admin-tabs">
+          <TabsTrigger value="users" data-testid="admin-tab-users">{t("nav_users")}</TabsTrigger>
+          <TabsTrigger value="vendors" data-testid="admin-tab-vendors">{t("admin_vendors")}</TabsTrigger>
+          <TabsTrigger value="orders" data-testid="admin-tab-orders">{t("nav_work_orders")}</TabsTrigger>
+          <TabsTrigger value="bills" data-testid="admin-tab-bills">{t("nav_bills")}</TabsTrigger>
+        </TabsList>
+
+        {/* ---------- USERS: the only records created in this portal ---------- */}
+        <TabsContent value="users">
+          <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">{t("nav_users")}</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{t("users_note")}</p>
+              </div>
+              <Dialog open={userOpen} onOpenChange={setUserOpen}>
+                <DialogTrigger
+                  render={
+                    <Button data-testid="admin-add-user-open" className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white gap-2 h-9">
+                      <UserPlus size={15} /> {t("create_user")}
+                    </Button>
+                  }
+                />
+                <DialogContent className="bg-white sm:max-w-[520px]">
+                  <DialogHeader>
+                    <DialogTitle>{t("create_user")}</DialogTitle>
+                    <DialogDescription>{t("create_user_hint")}</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={submitUser} className="space-y-4" data-testid="admin-user-form">
+                    <div className="space-y-2">
+                      <Label htmlFor="u-role">{t("role")}</Label>
+                      <Select value={form.role} onValueChange={(v) => setForm({ ...form, role: v })}>
+                        <SelectTrigger id="u-role" data-testid="admin-user-role-select" className="w-full">
+                          <SelectValue>{(v) => ROLE_LABELS[v] ?? v}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="vendor" data-testid="admin-user-role-vendor">Vendor</SelectItem>
+                          <SelectItem value="admin" data-testid="admin-user-role-admin">Administrator</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {form.role === "vendor" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="u-code">{t("vendor_code")}</Label>
+                        <Select
+                          value={form.vendor_code}
+                          onValueChange={(v) => {
+                            const ven = vendorRows.find((x) => x.code === v);
+                            setForm({
+                              ...form,
+                              vendor_code: v,
+                              email: form.email || ven?.email || "",
+                              name: form.name || ven?.contact_person || "",
+                            });
+                          }}
+                        >
+                          <SelectTrigger id="u-code" data-testid="admin-user-vendor-select" className="w-full">
+                            <SelectValue placeholder={t("select_vendor")}>
+                              {(v) => v || t("select_vendor")}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {vendorRows.map((v) => (
+                              <SelectItem key={v.id} value={v.code} data-testid={`admin-user-vendor-option-${v.code}`}>
+                                {v.code} · {v.company_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">{t("vendor_code_hint")}</p>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="u-email">{t("email")}</Label>
+                      <Input
+                        id="u-email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        data-testid="admin-user-email-input"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="u-name">{t("contact_person")}</Label>
+                      <Input
+                        id="u-name"
+                        value={form.name}
+                        onChange={(e) => setForm({ ...form, name: e.target.value })}
+                        data-testid="admin-user-name-input"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="u-pass">
+                        {form.role === "admin" ? t("password") : `${t("password")} (${t("optional")})`}
+                      </Label>
+                      <Input
+                        id="u-pass"
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        placeholder={form.role === "vendor" ? form.vendor_code || t("vendor_code") : ""}
+                        data-testid="admin-user-password-input"
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setUserOpen(false)}>{t("cancel")}</Button>
+                      <Button
+                        type="submit"
+                        disabled={createUser.isPending}
+                        data-testid="admin-user-submit"
+                        className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white"
+                      >
+                        {t("submit")}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="admin-users-table">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr className="text-left">
+                    {["email", "contact_person", "role", "vendor_code", "reset_password", "actions"].map((h) => (
+                      <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{t(h)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {userRows.length === 0 && (
+                    <tr><td colSpan={6} className="px-5 py-14 text-center text-slate-400" data-testid="admin-users-empty">
+                      {users.isLoading ? t("loading") : t("no_data")}
+                    </td></tr>
+                  )}
+                  {userRows.map((u) => (
+                    <tr key={u.id} className="border-t border-slate-100" data-testid={`admin-user-row-${u.email}`}>
+                      <td className="px-4 py-3.5 text-slate-900">{u.email}</td>
+                      <td className="px-4 py-3.5 text-slate-700">{u.name}</td>
+                      <td className="px-4 py-3.5">
+                        <Badge variant="outline" className={u.role === "admin"
+                          ? "bg-blue-50 text-blue-800 border-blue-200"
+                          : "bg-slate-100 text-slate-700 border-slate-300"}>
+                          {ROLE_LABELS[u.role] ?? u.role}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-xs text-[#1D4ED8]">{u.vendor_code || "—"}</td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex gap-1.5">
+                          <Input
+                            value={pwDraft[u.id] ?? ""}
+                            onChange={(e) => setPwDraft({ ...pwDraft, [u.id]: e.target.value })}
+                            placeholder={t("new_password")}
+                            data-testid={`admin-pw-input-${u.email}`}
+                            className="h-8 w-[130px] text-xs"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!(pwDraft[u.id] ?? "").trim()}
+                            onClick={() => resetPw.mutate({ id: u.id, password: pwDraft[u.id] })}
+                            data-testid={`admin-pw-save-${u.email}`}
+                            className="h-8 gap-1"
+                          >
+                            <KeyRound size={13} />
+                          </Button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => removeUser.mutate(u.id)}
+                          data-testid={`admin-user-delete-${u.email}`}
+                          className="h-8 text-red-700 border-red-200 hover:bg-red-50"
+                        >
+                          <Trash2 size={13} />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ---------- read-only mirrors of the workflow portal ---------- */}
+        <TabsContent value="vendors">
+          <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-200">
+              <h2 className="text-base font-semibold text-slate-900">{t("admin_vendors")}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{t("read_only_note")}</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="admin-vendors-table">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr className="text-left">
+                    {["vendor_code", "company_name", "contact_person", "email", "gstin", "phone"].map((h) => (
+                      <th key={h} className="px-5 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{t(h)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {vendorRows.length === 0 && (
+                    <tr><td colSpan={6} className="px-5 py-14 text-center text-slate-400" data-testid="admin-vendors-empty">{t("no_data")}</td></tr>
+                  )}
+                  {vendorRows.map((v) => (
+                    <tr key={v.id} className="border-t border-slate-100" data-testid={`admin-vendor-row-${v.code}`}>
+                      <td className="px-5 py-3.5 font-mono text-xs text-[#1D4ED8] font-semibold">{v.code}</td>
+                      <td className="px-5 py-3.5 text-slate-900">
+                        <span className="flex items-center gap-2">
+                          <Building2 size={14} className="text-slate-400 shrink-0" /> {v.company_name}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-700">{v.contact_person}</td>
+                      <td className="px-5 py-3.5 text-slate-500">{v.email}</td>
+                      <td className="px-5 py-3.5 font-mono text-xs text-slate-600">{v.gstin}</td>
+                      <td className="px-5 py-3.5 text-slate-600 whitespace-nowrap">{v.phone}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="orders">
+          <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-200">
+              <h2 className="text-base font-semibold text-slate-900">{t("nav_work_orders")}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{t("read_only_note")}</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="admin-orders-table">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr className="text-left">
+                    {["po_number", "vendor", "title", "value", "status"].map((h) => (
+                      <th key={h} className="px-5 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{t(h)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderRows.length === 0 && (
+                    <tr><td colSpan={5} className="px-5 py-14 text-center text-slate-400" data-testid="admin-orders-empty">{t("no_data")}</td></tr>
+                  )}
+                  {orderRows.map((o) => (
+                    <tr key={o.id} className="border-t border-slate-100" data-testid={`admin-order-row-${o.po_number}`}>
+                      <td className="px-5 py-3.5 font-mono text-xs text-[#1D4ED8] font-semibold">{o.po_number}</td>
+                      <td className="px-5 py-3.5 text-slate-700 max-w-[200px] truncate">{o.vendor_name}</td>
+                      <td className="px-5 py-3.5 text-slate-900 max-w-[280px] truncate">{o.title}</td>
+                      <td className="px-5 py-3.5 whitespace-nowrap font-medium">{formatINR(o.value)}</td>
+                      <td className="px-5 py-3.5"><StatusBadge status={o.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bills">
+          <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-200">
+              <h2 className="text-base font-semibold text-slate-900">{t("nav_bills")}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{t("read_only_note")}</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="admin-bills-table">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr className="text-left">
+                    {["invoice_no", "vendor", "total", "status", "utr", "due_date"].map((h) => (
+                      <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{t(h)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {billRows.length === 0 && (
+                    <tr><td colSpan={6} className="px-5 py-14 text-center text-slate-400" data-testid="admin-bills-empty">{t("no_data")}</td></tr>
+                  )}
+                  {billRows.map((b) => (
+                    <tr key={b.id} className="border-t border-slate-100" data-testid={`admin-bill-row-${b.invoice_no}`}>
+                      <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-900">{b.invoice_no}</td>
+                      <td className="px-4 py-3.5 text-slate-700 max-w-[200px] truncate">{b.vendor_name}</td>
+                      <td className="px-4 py-3.5 font-semibold whitespace-nowrap">{formatINR(b.total_amount)}</td>
+                      <td className="px-4 py-3.5"><StatusBadge status={b.status} label={b.status_label} /></td>
+                      <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500">{b.utr || "—"}</td>
+                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">{b.due_date || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </AppLayout>
+  );
+}
+
+export default function Admin() {
+  return (
+    <RequireAuth adminOnly>
+      <AdminInner />
+    </RequireAuth>
+  );
+}
