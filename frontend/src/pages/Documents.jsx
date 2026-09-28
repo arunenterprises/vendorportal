@@ -117,7 +117,7 @@ function DocumentsInner() {
           : "Upload your Sale Invoice and statutory documents. Maximum file size 100 KB. Downloads are available to the admin only."
       }
     >
-      <div className={isVendor ? "grid grid-cols-1 xl:grid-cols-[1fr_1.5fr] gap-6" : "grid grid-cols-1 gap-6"}>
+      <div className={isVendor ? "grid grid-cols-1 xl:grid-cols-[340px_1fr] gap-6" : "grid grid-cols-1 gap-6"}>
         {isVendor && (
           <Card className="p-6 bg-white border-slate-200 rounded-xl shadow-sm h-fit">
             <h2 className="text-base font-semibold text-slate-900 mb-5">Upload Document</h2>
@@ -128,7 +128,7 @@ function DocumentsInner() {
                   id="docname"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Sale Invoice 2026.pdf"
+                  placeholder=""
                   data-testid="document-name-input"
                 />
               </div>
@@ -179,16 +179,16 @@ function DocumentsInner() {
             <h2 className="text-base font-semibold text-slate-900">Documents</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm table-fixed min-w-[760px]" data-testid="documents-table">
+            <table className="w-full text-sm table-fixed" data-testid="documents-table">
               <thead className="bg-slate-50 text-slate-500">
                 <tr className="text-left">
                   {isAdmin && (
                     <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[22%]">Vendor</th>
                   )}
-                  <th className={`px-5 py-3 font-semibold text-xs uppercase tracking-wide ${isAdmin ? "w-[28%]" : "w-[40%]"}`}>
+                  <th className={`px-5 py-3 font-semibold text-xs uppercase tracking-wide ${isAdmin ? "w-[28%]" : "w-[34%]"}`}>
                     Document Name
                   </th>
-                  <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[18%]">Type</th>
+                  <th className={`px-5 py-3 font-semibold text-xs uppercase tracking-wide ${isAdmin ? "w-[18%]" : "w-[26%]"}`}>Type</th>
                   <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[10%]">Size</th>
                   <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[12%]">Uploaded</th>
                   <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide w-[14%]">Actions</th>
