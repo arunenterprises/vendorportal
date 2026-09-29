@@ -10,6 +10,7 @@ so a work order is derived per (vendorCode, workOrderNo).
 import logging
 import os
 from datetime import datetime, timezone
+from uuid import uuid4
 
 import httpx
 
@@ -325,7 +326,7 @@ async def sync_from_arun() -> dict:
             })
             logins.append({"vendor_code": code, "password": code, "vendor": vendor["company_name"]})
 
-    work_orders, bills, skipped = 0, 0, []
+    work_orders, bills, skipped, changes = 0, 0, [], 0
     for src in remote_bills:
         code = str(src.get("vendorCode") or "").strip()
         vendor = vendors_by_code.get(code)
@@ -347,6 +348,29 @@ async def sync_from_arun() -> dict:
             bill["utr"] = local["utr"]
             bill["status"] = local.get("status", bill["status"])
             bill["paid_date"] = local.get("paid_date", bill["paid_date"])
+        # record what changed upstream so the vendor can be told about it
+        if local:
+            for field, label in (
+                ("status_label", "Payment status"),
+                ("approval_status", "Approval status"),
+                ("final_release_status", "Final release"),
+                ("total_amount", "Payable total"),
+                ("utr", "UTR"),
+            ):
+                before, after = local.get(field), bill.get(field)
+                if str(before or "") != str(after or ""):
+                    changes += 1
+                    await db.bill_changes.insert_one({
+                        "id": str(uuid4()),
+                        "vendor_id": vendor["id"],
+                        "bill_id": bill["id"],
+                        "invoice_no": bill["invoice_no"],
+                        "field": field,
+                        "label": label,
+                        "from_value": str(before or ""),
+                        "to_value": str(after or ""),
+                        "changed_at": datetime.now(timezone.utc),
+                    })
         await db.bills.update_one({"invoice_no": bill["invoice_no"]}, {"$set": bill}, upsert=True)
         bills += 1
 
@@ -354,6 +378,7 @@ async def sync_from_arun() -> dict:
         "vendors": len(vendors_by_code),
         "work_orders": work_orders,
         "bills": bills,
+        "changes": changes,
         "new_logins": logins,
         "skipped_bills": skipped,
         "synced_at": datetime.now(timezone.utc),

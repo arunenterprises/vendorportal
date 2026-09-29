@@ -22,6 +22,14 @@ async def list_bills(user=Depends(current_user)):
     return [Bill(**d) for d in docs]
 
 
+@router.get("/changes")
+async def bill_changes(user=Depends(current_user)):
+    """What changed on the workflow portal recently — newest first."""
+    q = {} if user.get("role") == "admin" else {"vendor_id": user.get("vendor_id")}
+    rows = await db.bill_changes.find(q, {"_id": 0}).sort("changed_at", -1).to_list(25)
+    return rows
+
+
 @router.get("/{bill_id}", response_model=Bill)
 async def get_bill(bill_id: str, user=Depends(current_user)):
     doc = await db.bills.find_one({"id": bill_id}, {"_id": 0})

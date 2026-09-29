@@ -4,6 +4,7 @@ import { ArrowUpRight, Banknote, FileText, IndianRupee, Wallet } from "lucide-re
 import AppLayout from "@/components/AppLayout";
 import StatusBadge from "@/components/StatusBadge";
 import RequireAuth from "@/components/RequireAuth";
+import ChangeAlerts from "@/components/ChangeAlerts";
 import { Card } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
 import { formatCompactINR, formatINR, useI18n } from "@/lib/i18n";
@@ -84,7 +85,9 @@ function DashboardInner() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-6">
-        <Card className="bg-white border-slate-200 rounded-xl shadow-sm overflow-hidden p-0">
+        <div className="space-y-6">
+          <ChangeAlerts />
+          <Card className="bg-white border-slate-200 rounded-xl shadow-sm overflow-hidden p-0">
           <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
             <h2 className="text-base font-semibold text-slate-900">{t("recent_bills")}</h2>
             <Link
@@ -122,7 +125,8 @@ function DashboardInner() {
               </tbody>
             </table>
           </div>
-        </Card>
+          </Card>
+        </div>
 
         <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-200">

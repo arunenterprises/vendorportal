@@ -145,3 +145,10 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   - Work order: WO expiry date, revision, UOM, and the ORIGINAL Purchase Order PDF uploaded upstream -> `GET /api/work-orders/{id}/po-file`.
 - Every sync re-upserts these, so any change made on the workflow portal reflects in the vendor portal on the next sync.
 - UI: Bills row click -> full bill detail dialog (amounts, verification & final release, items, history); Vendor Details -> bank + registration/approval + history; Work Order detail -> expiry/revision/PO file + expanded BOQ.
+
+## Auto sync, change alerts, payment timeline, sync log
+- **Auto sync**: `.emergent/crons.yml` -> `nightly-arun-sync`, daily 01:00 Asia/Kolkata, POST `/api/cron/sync-arun`.
+  Endpoint requires `Authorization: Bearer $WEBHOOK_CRON_SECRET` (backend/.env), de-dupes on `X-Webhook-Id` via `cron_runs`, acks 2xx and runs the sync in a BackgroundTask.
+- **Change alerts**: each sync diffs status_label / approval_status / final_release_status / total_amount / utr against the stored bill and writes `bill_changes`. `GET /api/bills/changes` (vendor-scoped) feeds the "Recent Updates" card on the dashboard.
+- **Payment timeline**: `components/PaymentTimeline.jsx` inside the bill detail dialog — submitted -> measurement -> approved -> scheduled -> released, with each upstream date.
+- **Sync log**: `GET /api/sync/runs` (admin only, 403 for vendors) -> Admin "Sync Log" tab with counts, changes, new logins and skipped bills.

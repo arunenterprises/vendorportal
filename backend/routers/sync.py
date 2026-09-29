@@ -20,10 +20,18 @@ async def run_arun_sync(user=Depends(admin_user)):
         "vendors": result["vendors"],
         "work_orders": result["work_orders"],
         "bills": result["bills"],
+        "changes": result.get("changes", 0),
         "new_logins": result["new_logins"],
         "skipped_bills": result["skipped_bills"],
         "synced_at": result["synced_at"],
     }
+
+
+@router.get("/runs")
+async def sync_runs(user=Depends(admin_user)):
+    """Last 10 sync runs — counts, skipped bills and new logins."""
+    runs = await db.sync_runs.find({}, {"_id": 0}).sort("synced_at", -1).to_list(10)
+    return runs
 
 
 @router.get("/status")

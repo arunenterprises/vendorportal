@@ -40,8 +40,10 @@ function AdminInner() {
   const bills = useQuery({ queryKey: ["bills"], queryFn: () => apiGet("/bills"), retry: false });
   const orders = useQuery({ queryKey: ["work-orders"], queryFn: () => apiGet("/work-orders"), retry: false });
   const syncInfo = useQuery({ queryKey: ["sync-status"], queryFn: () => apiGet("/sync/status"), retry: false });
+  const syncRuns = useQuery({ queryKey: ["sync-runs"], queryFn: () => apiGet("/sync/runs"), retry: false });
 
   const userRows = users.isError ? [] : users.data ?? [];
+  const syncRows = syncRuns.isError ? [] : syncRuns.data ?? [];
   const vendorRows = vendors.isError ? [] : vendors.data ?? [];
   const billRows = bills.isError ? [] : bills.data ?? [];
   const orderRows = orders.isError ? [] : orders.data ?? [];
@@ -151,6 +153,7 @@ function AdminInner() {
           <TabsTrigger value="vendors" data-testid="admin-tab-vendors">{t("admin_vendors")}</TabsTrigger>
           <TabsTrigger value="orders" data-testid="admin-tab-orders">{t("nav_work_orders")}</TabsTrigger>
           <TabsTrigger value="bills" data-testid="admin-tab-bills">{t("nav_bills")}</TabsTrigger>
+          <TabsTrigger value="sync" data-testid="admin-tab-sync">Sync Log</TabsTrigger>
         </TabsList>
 
         {/* ---------- USERS: the only records created in this portal ---------- */}
@@ -397,7 +400,60 @@ function AdminInner() {
           </Card>
         </TabsContent>
 
-        {/* ---------- read-only mirrors of the workflow portal ---------- */}        <TabsContent value="vendors">
+        <TabsContent value="sync">
+          <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-200">
+              <h2 className="text-base font-semibold text-slate-900">Sync Log</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Last 10 sync runs from the Arun workflow portal. A nightly sync runs automatically at 1:00 AM IST.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="admin-sync-log-table">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr className="text-left">
+                    {["Run At", "Vendors", "Work Orders", "Bills", "Changes", "New Logins", "Skipped Bills"].map((h) => (
+                      <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {syncRows.length === 0 && (
+                    <tr><td colSpan={7} className="px-5 py-14 text-center text-slate-400" data-testid="admin-sync-log-empty">
+                      {syncRuns.isLoading ? t("loading") : t("no_data")}
+                    </td></tr>
+                  )}
+                  {syncRows.map((r, i) => (
+                    <tr key={i} className="border-t border-slate-100" data-testid={`admin-sync-run-${i}`}>
+                      <td className="px-4 py-3.5 text-slate-700 whitespace-nowrap">
+                        {r.synced_at ? new Date(r.synced_at).toLocaleString("en-IN") : "—"}
+                      </td>
+                      {r.error ? (
+                        <td colSpan={6} className="px-4 py-3.5 text-red-700">Failed: {r.error}</td>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3.5 text-slate-700">{r.vendors ?? 0}</td>
+                          <td className="px-4 py-3.5 text-slate-700">{r.work_orders ?? 0}</td>
+                          <td className="px-4 py-3.5 text-slate-700">{r.bills ?? 0}</td>
+                          <td className="px-4 py-3.5 text-slate-900 font-medium">{r.changes ?? 0}</td>
+                          <td className="px-4 py-3.5 text-slate-600 text-xs">
+                            {(r.new_logins || []).map((l) => l.vendor_code).join(", ") || "—"}
+                          </td>
+                          <td className="px-4 py-3.5 text-amber-700 text-xs">
+                            {(r.skipped_bills || []).join(", ") || "—"}
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ---------- read-only mirrors of the workflow portal ---------- */}
+        <TabsContent value="vendors">
           <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-200">
               <h2 className="text-base font-semibold text-slate-900">{t("admin_vendors")}</h2>

@@ -4,6 +4,7 @@ import { Download, Search } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import RequireAuth from "@/components/RequireAuth";
 import StatusBadge from "@/components/StatusBadge";
+import PaymentTimeline from "@/components/PaymentTimeline";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -200,6 +201,11 @@ function BillsInner() {
                 {open.todo_notes && (
                   <p className="text-xs text-slate-500 mt-4">Notes: {open.todo_notes}</p>
                 )}
+              </div>
+
+              <div className="border-t border-slate-100 pt-5">
+                <h3 className="text-sm font-semibold text-slate-900 mb-4">Payment Timeline</h3>
+                <PaymentTimeline bill={open} />
               </div>
 
               {(open.items || []).length > 0 && (

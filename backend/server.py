@@ -66,6 +66,7 @@ from routers.work_orders import router as work_orders_router
 from routers.bills import router as bills_router
 from routers.documents import router as documents_router
 from routers.sync import router as sync_router
+from routers.cron import router as cron_router
 from routers.users import router as users_router
 
 api_router.include_router(auth_router)
@@ -74,6 +75,7 @@ api_router.include_router(work_orders_router)
 api_router.include_router(bills_router)
 api_router.include_router(documents_router)
 api_router.include_router(sync_router)
+api_router.include_router(cron_router)
 api_router.include_router(users_router)
 
 # Include the router in the main app
