@@ -81,6 +81,8 @@ function WorkOrderDetailInner() {
                 <Field label={t("due_date")} value={wo.due_date} />
                 <Field label="WO Expiry" value={wo.expiry_date} />
                 <Field label="Bill Status" value={wo.status_label} />
+                <Field label="Live Stage" value={wo.expired ? "WO expired" : wo.live_stage} />
+                <Field label="Next Stage" value={wo.next_stage || "Completed"} />
                 <Field label="UOM" value={wo.uom} />
                 <Field label="Revision" value={String(wo.revision ?? 0)} />
                 <Field label="PO File" value={wo.po_file_name || "Not uploaded"} />

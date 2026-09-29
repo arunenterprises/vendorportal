@@ -117,15 +117,27 @@ function WorkOrdersInner() {
                     </td>
                     <td className="px-5 py-3.5 min-w-[120px]">
                       <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#1D4ED8] rounded-full" style={{ width: `${pct}%` }} />
+                        <div
+                          className="h-full bg-[#1D4ED8] rounded-full [transition:width_.3s_ease]"
+                          style={{ width: `${o.stages_total ? Math.round((o.stages_done / o.stages_total) * 100) : pct}%` }}
+                        />
                       </div>
-                      <span className="text-[11px] text-slate-400">{done}/{total}</span>
+                      <span className="text-[11px] text-slate-400">
+                        {o.stages_total ? `${o.stages_done}/${o.stages_total}` : `${done}/${total}`}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">{o.due_date}</td>
-                    <td className="px-5 py-3.5">
-                      <StatusBadge status={o.status} />
+                    <td className="px-5 py-3.5 min-w-[170px]">
+                      <StatusBadge status={o.expired ? "on_hold" : o.status} />
+                      <p className="text-[11px] text-slate-700 mt-1 font-medium" data-testid={`work-order-live-stage-${o.po_number}`}>
+                        {o.expired ? "WO expired" : o.live_stage}
+                        {o.live_stage_date ? ` · ${o.live_stage_date}` : ""}
+                      </p>
+                      {o.next_stage ? (
+                        <p className="text-[11px] text-slate-400">Next: {o.next_stage}</p>
+                      ) : null}
                       {o.status_label ? (
-                        <p className="text-[11px] text-slate-500 mt-1" data-testid={`work-order-status-label-${o.po_number}`}>
+                        <p className="text-[11px] text-[#1D4ED8] mt-0.5" data-testid={`work-order-status-label-${o.po_number}`}>
                           {o.status_label}
                         </p>
                       ) : null}

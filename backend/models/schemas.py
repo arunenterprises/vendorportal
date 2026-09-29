@@ -152,6 +152,13 @@ class WorkOrder(BaseModel):
     po_file_name: str = ""
     has_po_file: bool = False
     status_label: str = ""
+    live_stage: str = ""
+    live_stage_date: str = ""
+    next_stage: str = ""
+    stages_done: int = 0
+    stages_total: int = 0
+    expired: bool = False
+    synced_at: datetime | None = None
 
 
 class Bill(BaseModel):

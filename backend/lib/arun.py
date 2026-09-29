@@ -16,6 +16,7 @@ from uuid import uuid4
 import httpx
 
 from lib.auth import hash_password
+from lib.dates import today_iso
 from lib.db import db
 
 logger = logging.getLogger(__name__)
@@ -245,9 +246,31 @@ def map_work_order(src: dict, vendor: dict) -> dict:
         status = "on_hold"
     else:
         status = "active"
+    # live stage of the work order, straight from the workflow portal's bill section
+    today = today_iso("Asia/Kolkata")
+    expiry = str(src.get("workOrderExpiryDate") or "")
+    stages = [
+        ("Work order issued", bool(src.get("workOrderNo")), src.get("workOrderDate") or ""),
+        ("Bill submitted", bool(src.get("billDate")), src.get("billDate") or ""),
+        ("Measurement verified", bool(src.get("measurementStatus")), src.get("processDate") or ""),
+        ("Bill approved", "approved" in str(src.get("approvalStatus") or "").lower(), src.get("approvalDate") or ""),
+        ("Payment released", bill_status == "paid", src.get("scheduledDueDate") or ""),
+    ]
+    done = [s for s in stages if s[1]]
+    live_stage = done[-1][0] if done else "Work order issued"
+    live_stage_date = done[-1][2] if done else ""
+    next_stage = next((s[0] for s in stages if not s[1]), "")
+    expired = bool(expiry and expiry < today and bill_status != "paid")
+
     return {
         "id": _wo_slug(vendor["code"], wo_no),
         "status_label": label,
+        "live_stage": live_stage,
+        "live_stage_date": live_stage_date,
+        "next_stage": next_stage,
+        "stages_done": len(done),
+        "stages_total": len(stages),
+        "expired": expired,
         "po_number": wo_no,
         "vendor_id": vendor["id"],
         "vendor_name": vendor["company_name"],

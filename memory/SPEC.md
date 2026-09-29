@@ -157,3 +157,8 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - Work-order ids are now slugified (`arun-wo-<code>-<wo-no-slug>`); upstream WO numbers contain '/', which broke the /work-orders/:id route and looked like an auto-logout. Bill.work_order_id uses the same slug.
 - Work Orders "Actions" downloads the ORIGINAL work order file uploaded in the workflow portal's bill section (`/api/work-orders/{id}/po-file`); falls back to the generated PDF only when no file exists upstream.
 - Work-order status is derived from the upstream bill section: paid -> completed, hold/reject/reopen/query -> on_hold, else active; the verbatim upstream label is shown as `status_label`.
+
+## Live work-order status
+- `map_work_order` derives a live 5-stage pipeline from the upstream bill section: Work order issued -> Bill submitted -> Measurement verified -> Bill approved -> Payment released.
+- Fields on WorkOrder: `live_stage`, `live_stage_date`, `next_stage`, `stages_done`/`stages_total`, `expired` (WO expiry date passed and not paid), `status_label` (verbatim upstream label).
+- UI: Work Orders status column shows badge + live stage with date + "Next: ..." + upstream label; progress bar uses stages_done/stages_total. Detail page shows Live Stage / Next Stage fields.
