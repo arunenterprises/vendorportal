@@ -152,3 +152,8 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - **Change alerts**: each sync diffs status_label / approval_status / final_release_status / total_amount / utr against the stored bill and writes `bill_changes`. `GET /api/bills/changes` (vendor-scoped) feeds the "Recent Updates" card on the dashboard.
 - **Payment timeline**: `components/PaymentTimeline.jsx` inside the bill detail dialog — submitted -> measurement -> approved -> scheduled -> released, with each upstream date.
 - **Sync log**: `GET /api/sync/runs` (admin only, 403 for vendors) -> Admin "Sync Log" tab with counts, changes, new logins and skipped bills.
+
+## Work order fixes
+- Work-order ids are now slugified (`arun-wo-<code>-<wo-no-slug>`); upstream WO numbers contain '/', which broke the /work-orders/:id route and looked like an auto-logout. Bill.work_order_id uses the same slug.
+- Work Orders "Actions" downloads the ORIGINAL work order file uploaded in the workflow portal's bill section (`/api/work-orders/{id}/po-file`); falls back to the generated PDF only when no file exists upstream.
+- Work-order status is derived from the upstream bill section: paid -> completed, hold/reject/reopen/query -> on_hold, else active; the verbatim upstream label is shown as `status_label`.

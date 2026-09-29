@@ -9,6 +9,7 @@ so a work order is derived per (vendorCode, workOrderNo).
 
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -167,7 +168,7 @@ def map_bill(src: dict, vendor: dict) -> dict:
         "invoice_no": perm,
         "vendor_id": vendor["id"],
         "vendor_name": vendor["company_name"],
-        "work_order_id": f"arun-wo-{vendor['code']}-{src.get('workOrderNo') or 'NA'}",
+        "work_order_id": _wo_slug(vendor["code"], str(src.get("workOrderNo") or "NA")),
         "po_number": str(src.get("workOrderNo") or ""),
         "invoice_date": src.get("billDate") or "",
         "description": src.get("itemDescription") or src.get("workScope") or "",
@@ -223,14 +224,30 @@ def map_bill(src: dict, vendor: dict) -> dict:
     }
 
 
+def _wo_slug(vendor_code: str, wo_no: str) -> str:
+    """URL-safe work-order id (upstream WO numbers contain '/')."""
+    safe = re.sub(r"[^A-Za-z0-9]+", "-", wo_no).strip("-") or "NA"
+    return f"arun-wo-{vendor_code}-{safe}"
+
+
 def map_work_order(src: dict, vendor: dict) -> dict:
     """Work-order data is embedded in each external bill."""
     wo_no = str(src.get("workOrderNo") or "NA")
     items = map_items(src)
 
-    status = "completed" if map_bill_status(src) == "paid" else "active"
+    # the work-order status is derived from the bill section of the workflow portal
+    bill_status = map_bill_status(src)
+    label = (src.get("finalReleaseStatus") or src.get("approvalStatus") or "").strip()
+    low = label.lower()
+    if bill_status == "paid":
+        status = "completed"
+    elif any(k in low for k in ("hold", "reject", "reopen", "query")):
+        status = "on_hold"
+    else:
+        status = "active"
     return {
-        "id": f"arun-wo-{vendor['code']}-{wo_no}",
+        "id": _wo_slug(vendor["code"], wo_no),
+        "status_label": label,
         "po_number": wo_no,
         "vendor_id": vendor["id"],
         "vendor_name": vendor["company_name"],

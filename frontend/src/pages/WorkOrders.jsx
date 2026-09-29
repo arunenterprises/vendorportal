@@ -122,16 +122,30 @@ function WorkOrdersInner() {
                       <span className="text-[11px] text-slate-400">{done}/{total}</span>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">{o.due_date}</td>
-                    <td className="px-5 py-3.5"><StatusBadge status={o.status} /></td>
+                    <td className="px-5 py-3.5">
+                      <StatusBadge status={o.status} />
+                      {o.status_label ? (
+                        <p className="text-[11px] text-slate-500 mt-1" data-testid={`work-order-status-label-${o.po_number}`}>
+                          {o.status_label}
+                        </p>
+                      ) : null}
+                    </td>
                     <td className="px-5 py-3.5">
                       <Button
                         variant="outline"
                         size="sm"
                         data-testid={`download-work-order-${o.po_number}`}
-                        onClick={() => downloadFile(`/api/work-orders/${o.id}/pdf`, `${o.po_number}.pdf`)}
+                        onClick={() =>
+                          downloadFile(
+                            o.has_po_file
+                              ? `/api/work-orders/${o.id}/po-file`
+                              : `/api/work-orders/${o.id}/pdf`,
+                            o.has_po_file ? o.po_file_name || `${o.po_number}.pdf` : `${o.po_number}.pdf`,
+                          )
+                        }
                         className="gap-1.5 whitespace-nowrap"
                       >
-                        <Download size={14} /> PDF
+                        <Download size={14} /> {o.has_po_file ? "Work Order" : "PDF"}
                       </Button>
                     </td>
                   </tr>

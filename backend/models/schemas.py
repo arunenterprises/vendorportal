@@ -151,6 +151,7 @@ class WorkOrder(BaseModel):
     updated_at: str = ""
     po_file_name: str = ""
     has_po_file: bool = False
+    status_label: str = ""
 
 
 class Bill(BaseModel):
