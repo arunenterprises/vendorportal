@@ -369,6 +369,8 @@ async def sync_from_arun() -> dict:
             logins.append({"vendor_code": code, "password": code, "vendor": vendor["company_name"]})
 
     work_orders, bills, skipped, changes = 0, 0, [], 0
+    seen_wo_ids: set[str] = set()
+    seen_invoice_nos: set[str] = set()
     for src in remote_bills:
         code = str(src.get("vendorCode") or "").strip()
         vendor = vendors_by_code.get(code)
@@ -380,6 +382,7 @@ async def sync_from_arun() -> dict:
             vendor = doc
 
         wo = map_work_order(src, vendor)
+        seen_wo_ids.add(wo["id"])
         # an admin's manual status override wins over the upstream-derived status
         existing = await db.work_orders.find_one(
             {"id": wo["id"]},
@@ -395,7 +398,7 @@ async def sync_from_arun() -> dict:
             wo["po_file_type"] = existing.get("po_file_type", "application/pdf")
             wo["has_po_file"] = True
         await db.work_orders.update_one({"id": wo["id"]}, {"$set": wo}, upsert=True)
-        work_orders += 1
+        work_orders = len(seen_wo_ids)
 
         bill = map_bill(src, vendor)
         # never clobber a UTR / payment already recorded inside this portal
@@ -428,13 +431,25 @@ async def sync_from_arun() -> dict:
                         "changed_at": datetime.now(timezone.utc),
                     })
         await db.bills.update_one({"invoice_no": bill["invoice_no"]}, {"$set": bill}, upsert=True)
-        bills += 1
+        seen_invoice_nos.add(bill["invoice_no"])
+        bills = len(seen_invoice_nos)
+
+    # the workflow portal is the single source of truth: drop anything it no longer has
+    # (this also clears rows left behind by an older id scheme, which showed up as duplicates)
+    removed_wo = await db.work_orders.delete_many(
+        {"source": "arun_portal", "id": {"$nin": list(seen_wo_ids)}}
+    )
+    removed_bills = await db.bills.delete_many(
+        {"source": "arun_portal", "invoice_no": {"$nin": list(seen_invoice_nos)}}
+    )
 
     result = {
         "vendors": len(vendors_by_code),
         "work_orders": work_orders,
         "bills": bills,
         "changes": changes,
+        "removed_work_orders": removed_wo.deleted_count,
+        "removed_bills": removed_bills.deleted_count,
         "new_logins": logins,
         "skipped_bills": skipped,
         "synced_at": datetime.now(timezone.utc),

@@ -167,3 +167,12 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - `PATCH /api/work-orders/{id}/status` (ADMIN ONLY, 403 for vendors; 400 for a status outside active/completed/on_hold) sets `status`, `status_overridden=True`, `status_updated_by/at` and writes a `bill_changes` alert (field `work_order_status`) so the vendor sees it on the dashboard "Recent Updates" immediately.
 - Sync never clobbers an overridden status, and keeps an existing WO copy if a later bill on the same work order has none.
 - Badge colours (both roles): active = green, completed/closed = red, on hold = yellow. Admin rows carry a status dropdown (Active / Closed / On Hold); vendors see the badge only.
+
+## Duplicate work orders fix
+- Sync is now authoritative: after upserting, any `source: arun_portal` work order / bill NOT present in the current upstream response is deleted (`removed_work_orders`, `removed_bills` in the sync result + Sync Log). This clears rows left behind by an older id scheme, which the admin panel showed as 1-1 duplicates.
+- Admin Command Center Work Orders tab also de-dupes client side on `vendor_id::po_number` (Work Orders page already de-duped on po_number).
+- There is NO upstream "Work Order & Project Allocation" API (only /api/vendors and /api/bills), so work orders are derived from the bill section and only change when that upstream data changes.
+
+## UI trims (user requests)
+- Change History removed from Vendor Details and the bill detail dialog; "Revision"/"Rev" fields removed from Vendor Details, Work Order detail and the bill dialog header (data still present in the API, just not shown).
+- Page header: title 38px, subtitle (firm name · vendor code) 16px semibold slate-700.

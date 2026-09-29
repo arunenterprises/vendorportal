@@ -84,7 +84,6 @@ function WorkOrderDetailInner() {
                 <Field label="Live Stage" value={wo.expired ? "WO expired" : wo.live_stage} />
                 <Field label="Next Stage" value={wo.next_stage || "Completed"} />
                 <Field label="UOM" value={wo.uom} />
-                <Field label="Revision" value={String(wo.revision ?? 0)} />
                 <Field label="PO File" value={wo.po_file_name || "Not uploaded"} />
               </div>
               <div className="mt-5 pt-5 border-t border-slate-100 flex items-center gap-4">

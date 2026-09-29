@@ -151,7 +151,7 @@ function BillsInner() {
           <DialogHeader>
             <DialogTitle>{open?.invoice_no}</DialogTitle>
             <DialogDescription>
-              {open?.vendor_name} · Bill No {open?.bill_no || "—"} · Rev {open?.revision ?? 0}
+              {open?.vendor_name} · Bill No {open?.bill_no || "—"}
             </DialogDescription>
           </DialogHeader>
 
@@ -233,21 +233,6 @@ function BillsInner() {
                       ))}
                     </tbody>
                   </table>
-                </div>
-              )}
-
-              {(open.history || []).length > 0 && (
-                <div className="border-t border-slate-100 pt-5">
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Change History</h3>
-                  <ol className="space-y-2" data-testid="bill-detail-history">
-                    {open.history.map((h, i) => (
-                      <li key={i} className="text-xs text-slate-600">
-                        <span className="font-semibold text-slate-900">{h.action}</span>
-                        {h.from ? ` (from ${h.from})` : ""} · {h.by} ·{" "}
-                        {h.at ? new Date(h.at).toLocaleString("en-IN") : ""}
-                      </li>
-                    ))}
-                  </ol>
                 </div>
               )}
 

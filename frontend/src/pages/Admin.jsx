@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -46,7 +46,16 @@ function AdminInner() {
   const syncRows = syncRuns.isError ? [] : syncRuns.data ?? [];
   const vendorRows = vendors.isError ? [] : vendors.data ?? [];
   const billRows = bills.isError ? [] : bills.data ?? [];
-  const orderRows = orders.isError ? [] : orders.data ?? [];
+  const orderRows = useMemo(() => {
+    const list = orders.isError ? [] : orders.data ?? [];
+    // one row per work order, even if an older id scheme left a stale copy behind
+    const seen = new Map();
+    for (const o of list) {
+      const key = `${o.vendor_id}::${o.po_number}`;
+      if (!seen.has(key)) seen.set(key, o);
+    }
+    return [...seen.values()];
+  }, [orders.data, orders.isError]);
 
   const runSync = useMutation({
     mutationFn: () => apiPost("/sync/arun"),

@@ -188,10 +188,12 @@ export default function AppLayout({ children, title, subtitle, action }) {
           <div className="max-w-[1320px]">
             <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
               <div>
-                <h1 className="text-[30px] font-semibold text-slate-900" data-testid="page-title">
+                <h1 className="text-[38px] leading-tight font-semibold text-slate-900" data-testid="page-title">
                   {title}
                 </h1>
-                {subtitle && <p className="text-sm text-slate-500 mt-1.5 max-w-2xl">{subtitle}</p>}
+                {subtitle && (
+                  <p className="text-base font-semibold text-slate-700 mt-2 max-w-2xl">{subtitle}</p>
+                )}
               </div>
               {action}
             </div>

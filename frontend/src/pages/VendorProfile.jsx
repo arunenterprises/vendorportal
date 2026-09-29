@@ -122,26 +122,8 @@ function VendorProfileInner() {
                 <Field label="Checked By" value={vendor.checked_by} />
                 <Field label="Prepared By" value={vendor.prepared_by} />
                 <Field label="Registration Expiry" value={vendor.expiry_date} />
-                <Field label="Revision" value={String(vendor.revision ?? 0)} />
                 <Field label={t("status")} value={vendor.status} />
               </div>
-
-              {(vendor.history || []).length > 0 && (
-                <div className="mt-6 pt-5 border-t border-slate-100">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400 font-semibold mb-3">
-                    Change History
-                  </p>
-                  <ol className="space-y-2" data-testid="vendor-history">
-                    {vendor.history.map((h, i) => (
-                      <li key={i} className="text-xs text-slate-600">
-                        <span className="font-semibold text-slate-900">{h.action}</span>
-                        {h.from ? ` (from ${h.from})` : ""} · {h.by} ·{" "}
-                        {h.at ? new Date(h.at).toLocaleString("en-IN") : ""}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
 
               <p className="text-xs text-slate-400 mt-6 pt-5 border-t border-slate-100">
                 {t("read_only_note")}

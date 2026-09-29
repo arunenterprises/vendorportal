@@ -1,0 +1,188 @@
+{
+  "iteration": 7,
+  "summary": "Retest of the work-order dedup bug fix (admin Work Orders tab / sync removed_work_orders / removed_bills counters / admin status override survives sync / vendor read-only view / Sync Log tab) plus full regression sweep. All 41 backend tests pass. Confirmed via direct curl + UI screenshot that GET /api/work-orders returns exactly 3 work orders with 3 unique po_numbers and unique ids (A/E/Febrication/008/2025, A/E/Work/Fabrication/08-2026/27, P00020), GET /api/bills returns 3, and repeated POST /api/sync/arun is idempotent (12/3/3, removed_work_orders=0/removed_bills=0 on a clean state, counters present in the response schema). Admin Command Center Work Orders stat card reads 3 (screenshot evidence). Fixed 4 of my OWN stale browser-check assertions that no longer matched current (legitimate) app/data state, none were application bugs: admin-sync-idempotent (hardcoded '1' from an old 1-vendor/1-order/1-bill seed, now 12/3/3), sidebar-vendor-firm-identity (vendor's real contact_person on the upstream portal changed from 'Ragvendra Singh' to 'Upendra Singh' between iterations - data drift, confirmed via GET /api/vendors), vendor-data-real-mapping (asserted bill ref_no inside the table row testid, but the UI only ever rendered ref_no in the bill detail panel, never the row - fixed the assertion location), admin-create-user-flow (password reset UI was refactored to a modal Dialog with fixed testids admin-pw-new-input/admin-pw-confirm-input/admin-pw-save-button instead of the old per-email inline input naming scheme - legitimate UI change, not a regression). No application bugs found.",
+  "passed": 24,
+  "failed": 0,
+  "checks": [
+    {
+      "criterion": "BUG FIX: Admin Command Center -> Work Orders tab shows no duplicate rows (3 rows, distinct PO numbers, stat card reads 3)",
+      "name": "work-orders-dedup-filters-summary",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran persisted check: admin Work Orders tab shows 3 rows, All(3)/Active(3)/Completed(0)/On Hold(0) filters, no duplicate PO numbers. Cross-checked with admin-create-user-flow screenshot showing 'WORK ORDERS 3' stat card and curl GET /api/work-orders returning po_numbers ['A/E/Febrication/008/2025','A/E/Work/Fabrication/08-2026/27','P00020'] with 3 unique ids."
+    },
+    {
+      "criterion": "BUG FIX: stale work-order rows from an old id scheme removed by sync; POST /api/sync/arun returns removed_work_orders/removed_bills counters",
+      "name": "test_tscheck_work_orders_dedup_and_download.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /work-orders as vendor -> 3 unique po_number values incl P00020; POST /sync/arun response schema includes removed_work_orders=0, removed_bills=0 on the current clean state (curl evidence: {\"vendors\":12,\"work_orders\":3,\"bills\":3,\"changes\":0,\"removed_work_orders\":0,\"removed_bills\":0,...}); GET /work-orders/{id}/po-file for P00020 -> 200 application/pdf, for a WO without a file -> 404."
+    },
+    {
+      "criterion": "Portal only mirrors the upstream workflow portal - counts stay stable and repeated sync is idempotent (no growth/duplicates)",
+      "name": "admin-sync-idempotent",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Fixed stale assertion (hardcoded '1' from an old 1/1/1 seed dataset; current documented seed is 12 vendors/3 work orders/3 bills). After fix: admin stat cards read 12/3/3 before and after clicking Sync, and 12/3/3 rows in Vendor Directory/Work Orders/Bills tabs both times - proves idempotency. Cross-checked via curl: two consecutive POST /sync/arun calls both return work_orders:3, bills:3, changes:0."
+    },
+    {
+      "criterion": "Portal only mirrors upstream - idempotent sync (backend)",
+      "name": "test_tscheck_sync_idempotent.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Existing backend suite test passed as part of the 41/41 pytest run."
+    },
+    {
+      "criterion": "Admin status override still works and survives a sync",
+      "name": "test_tscheck_work_order_status_survives_resync.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Admin PATCH P00020 -> completed (200); POST /sync/arun -> 200; GET /work-orders shows P00020 status='completed', status_overridden=true, has_po_file=true after sync. Restored to active in finally."
+    },
+    {
+      "criterion": "Admin can change work order status (dropdown, toast, badge, filter counts) - browser",
+      "name": "admin-work-order-status-change",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran persisted check unchanged: on_hold -> amber badge + 'On Hold (1)' filter; completed -> red badge + 'Completed (1)' filter; restored to active at end."
+    },
+    {
+      "criterion": "Status change endpoint auth/validation (200 admin / 403 vendor / 400 invalid / 404 unknown)",
+      "name": "test_tscheck_work_order_status_update.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "PATCH /work-orders/{id}/status: admin -> 200, vendor -> 403 (state unchanged), invalid status -> 400, unknown id -> 404."
+    },
+    {
+      "criterion": "Vendor view remains correct - exactly 1 work order (P00020), green Active badge, no status dropdown, no duplicate rows",
+      "name": "vendor-sees-status-readonly-and-recent-update",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran persisted check: vendor AE0001JV2627 /work-orders shows status-badge-completed after admin API patch (read-only, select count 0); dashboard change-alerts-card reflects the update. (Underlying dedup/vendor-scoping cross-checked separately in vendor-data-real-mapping: work-order-row-* count = 1 for this vendor.)"
+    },
+    {
+      "criterion": "Vendor sees exactly 1 work order, no duplicates (data mapping)",
+      "name": "vendor-data-real-mapping",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Fixed a stale assertion (bill ref_no was asserted inside the table row testid, but the UI only ever renders ref_no in the bill detail panel per Bills.jsx - not an app bug). After fix: vendor work-orders-table shows exactly 1 row (P00020) with correct description/amount; work order detail shows 3 milestones/3 items; bill row shows correct amounts/status; vendor profile statutory block shows correct GSTIN/PAN/IFSC."
+    },
+    {
+      "criterion": "Admin Sync Log tab reflects the latest run (vendors/work orders/bills counts)",
+      "name": "admin-sync-log-tab-shows-runs",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran persisted check: admin-sync-log-table visible with >=1 non-empty run row reflecting the latest sync."
+    },
+    {
+      "criterion": "Admin Sync Log backend (no regression)",
+      "name": "test_tscheck_admin_sync_log.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Part of the 41/41 pytest run."
+    },
+    {
+      "criterion": "No regression: Vendor login (public ingress URL)",
+      "name": "vendor-login-via-public-url",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "AE0001JV2627/AE0001JV2627 via https://vendor-portal-458.preview.emergentagent.com reaches the vendor dashboard."
+    },
+    {
+      "criterion": "No regression: Bills payment timeline dialog",
+      "name": "bill-detail-payment-timeline",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor bill-row-BILL00042627 opens bill-detail-panel with 'Payment Timeline' and payment-timeline-step-* entries."
+    },
+    {
+      "criterion": "No regression: Documents vendor upload-only, no download/delete",
+      "name": "documents-vendor-upload-no-download-delete",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor /documents: upload form present, 0 document-download-*/document-delete-* buttons."
+    },
+    {
+      "criterion": "No regression: Documents admin vendor identity column + download",
+      "name": "documents-admin-vendor-column-and-download",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Admin /documents shows document-vendor-* per row; download triggers a real file download."
+    },
+    {
+      "criterion": "No regression: badge colours (active green / completed red / on hold amber)",
+      "name": "admin-work-order-status-change",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-run confirms status-badge-on_hold has amber class and status-badge-completed has red class, restored to active/emerald at end."
+    },
+    {
+      "criterion": "No regression: PO-with-slash detail navigation",
+      "name": "work-order-po-slash-detail-navigation",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Clicking a PO number with a slash opens work order detail with BOQ table without logging out."
+    },
+    {
+      "criterion": "No regression: status column single-line rendering",
+      "name": "work-order-status-column-single-line",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Badge + auto-status text stays <=2 lines per row excluding the admin dropdown."
+    },
+    {
+      "criterion": "No regression: download button enabled/disabled by file availability",
+      "name": "work-order-download-button-file-availability",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor P00020 download enabled and triggers a real .pdf; admin row without a file has the button disabled."
+    },
+    {
+      "criterion": "No regression: admin login / Command Center loads",
+      "name": "admin-login-command-center",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Admin login reaches /admin Command Center."
+    },
+    {
+      "criterion": "No regression: vendor dashboard KPIs",
+      "name": "vendor-login-dashboard-kpis",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor dashboard KPI cards render after login."
+    },
+    {
+      "criterion": "No regression: vendor sidebar identity (company/email/code/contact person)",
+      "name": "sidebar-vendor-firm-identity",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Fixed a stale assertion: the vendor's real contact_person on the upstream portal changed from 'Ragvendra Singh' to 'Upendra Singh' since the check was authored (confirmed via curl GET /api/vendors -> contact_person: 'Upendra Singh'). Not an app bug - upstream data drift. Updated the expected value; sidebar-user-name/email/code assertions were already correct and passed unchanged."
+    },
+    {
+      "criterion": "No regression: admin create/reset-password/delete user flow",
+      "name": "admin-create-user-flow",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Fixed a stale assertion: password reset UI was refactored to a modal Dialog with fixed testids (admin-update-password-{email} opens it, then admin-pw-new-input/admin-pw-confirm-input/admin-pw-save-button) instead of the old inline per-email input naming the check assumed. Not an app bug - legitimate UI change. After fix: duplicate-vendor rejection toast, new admin user created, password reset via dialog, user deleted."
+    },
+    {
+      "criterion": "No regression: read-only UI (no create/edit controls for vendor profile/admin bills)",
+      "name": "read-only-no-create-edit-ui",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor profile and admin bills views remain read-only."
+    },
+    {
+      "criterion": "No regression: dashboard subtitle / admin sidebar identity / login error wording / no lang toggle-demo login / bill status filters and label wording",
+      "name": "dashboard-subtitle-shows-firm + admin-sidebar-identity-unaffected + login-error-mentions-vendor-code-rule + no-lang-toggle-no-demo-login + bill-status-filter-tabs-use-internal-bucket + bill-status-label-real-wording",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "All 6 persisted checks re-ran and passed unchanged."
+    }
+  ],
+  "bugs": [],
+  "action_items": [
+    "Repaired 4 of my own stale browser-check assertions that had drifted from current (legitimate) app/data state - none were application bugs: admin-sync-idempotent (old 1/1/1 seed hardcoded expectations vs current 12/3/3), sidebar-vendor-firm-identity (upstream vendor contact_person changed from 'Ragvendra Singh' to 'Upendra Singh' - real data drift confirmed via API), vendor-data-real-mapping (asserted a field, ref_no, in the table row when the UI only ever renders it in the bill detail panel), admin-create-user-flow (password-reset UI moved to a Dialog with fixed testids; old check assumed a since-removed inline per-email input scheme)."
+  ],
+  "retest_needed": false
+}
