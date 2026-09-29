@@ -137,3 +137,11 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 ## Sync fix (workflow portal)
 - Upstream vendors sometimes send junk emails ("nil", "na", "-"). These are now ignored and replaced with `<vendorcode>@arunenterprises.local`, otherwise the unique email index raised E11000 and the sync returned 502 "Could not reach the workflow portal".
 - Existing bad user records were repaired in the DB.
+
+## Full workflow-portal mirror (Vendor / Bill / Final)
+- `lib/arun.py` now mirrors EVERY upstream field:
+  - Vendor: account holder, branch, bank address/city/state, city/state/pincode/street, creation & approval dates, approved/checked/prepared/created by, revision, step, updatedAt, change history.
+  - Bill (incl. "Final" section): approver, approval date, account/purchase/site incharge, measurement status, WO rate check, GST-TDS check, process date, notes, other deductions, previous advance, TDS rate, UOM, quantity, bill serial, step, revision, updatedAt, line items (category, HSN, WO qty, billed qty, unit, rate), change history.
+  - Work order: WO expiry date, revision, UOM, and the ORIGINAL Purchase Order PDF uploaded upstream -> `GET /api/work-orders/{id}/po-file`.
+- Every sync re-upserts these, so any change made on the workflow portal reflects in the vendor portal on the next sync.
+- UI: Bills row click -> full bill detail dialog (amounts, verification & final release, items, history); Vendor Details -> bank + registration/approval + history; Work Order detail -> expiry/revision/PO file + expanded BOQ.

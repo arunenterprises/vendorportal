@@ -59,6 +59,26 @@ class Vendor(BaseModel):
     site_name: str = ""
     account_type: str = ""
     expiry_date: str = ""
+    # full mirror of the workflow portal's vendor record
+    account_holder: str = ""
+    branch_name: str = ""
+    bank_address: str = ""
+    bank_city: str = ""
+    bank_state: str = ""
+    city: str = ""
+    state: str = ""
+    pincode: str = ""
+    street_address: str = ""
+    creation_date: str = ""
+    approval_date: str = ""
+    approved_by: str = ""
+    checked_by: str = ""
+    prepared_by: str = ""
+    created_by: str = ""
+    revision: int = 0
+    step: int = 0
+    updated_at: str = ""
+    history: List[dict] = []
 
 
 class PortalUserCreate(BaseModel):
@@ -104,6 +124,9 @@ class LineItem(BaseModel):
     hsn: str = "998719"
     qty: float = 1
     rate: float = 0
+    unit: str = ""
+    billed_qty: float = 0
+    category_scope: str = ""
 
 
 class WorkOrder(BaseModel):
@@ -123,6 +146,11 @@ class WorkOrder(BaseModel):
     # interlink (Arun workflow portal)
     source: str = "local"
     uom: str = ""
+    expiry_date: str = ""
+    revision: int = 0
+    updated_at: str = ""
+    po_file_name: str = ""
+    has_po_file: bool = False
 
 
 class Bill(BaseModel):
@@ -156,6 +184,28 @@ class Bill(BaseModel):
     approval_status: str = ""
     final_release_status: str = ""
     project_code: str = ""
+    # "Final" section of the workflow portal, mirrored verbatim
+    approver_name: str = ""
+    approval_date: str = ""
+    account_incharge: str = ""
+    purchase_incharge: str = ""
+    site_incharge: str = ""
+    measurement_status: str = ""
+    gst_tds_check: str = ""
+    wo_rate_status: str = ""
+    process_date: str = ""
+    todo_notes: str = ""
+    other_deductions: float = 0
+    previous_advance: float = 0
+    tds_rate: float = 0
+    uom: str = ""
+    quantity: float = 0
+    bill_serial: int = 0
+    step: int = 0
+    revision: int = 0
+    updated_at: str = ""
+    items: List[LineItem] = []
+    history: List[dict] = []
 
 
 class DocumentOut(BaseModel):

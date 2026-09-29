@@ -34,13 +34,25 @@ function WorkOrderDetailInner() {
       subtitle={wo ? wo.title : ""}
       action={
         wo && (
-          <Button
-            data-testid="work-order-detail-download-button"
-            onClick={() => downloadFile(`/api/work-orders/${wo.id}/pdf`, `${wo.po_number}.pdf`)}
-            className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white gap-2 active:scale-[0.98] [transition:background-color_.18s_ease,transform_.1s_ease]"
-          >
-            <Download size={15} /> {t("download_po")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {wo.has_po_file && (
+              <Button
+                variant="outline"
+                data-testid="work-order-po-file-button"
+                onClick={() => downloadFile(`/api/work-orders/${wo.id}/po-file`, wo.po_file_name || `${wo.po_number}.pdf`)}
+                className="gap-2"
+              >
+                <Download size={15} /> Original PO File
+              </Button>
+            )}
+            <Button
+              data-testid="work-order-detail-download-button"
+              onClick={() => downloadFile(`/api/work-orders/${wo.id}/pdf`, `${wo.po_number}.pdf`)}
+              className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white gap-2 active:scale-[0.98] [transition:background-color_.18s_ease,transform_.1s_ease]"
+            >
+              <Download size={15} /> {t("download_po")}
+            </Button>
+          </div>
         )
       }
     >
@@ -67,6 +79,10 @@ function WorkOrderDetailInner() {
                 <Field label={t("value")} value={formatINR(wo.value)} />
                 <Field label={t("issued_date")} value={wo.issued_date} />
                 <Field label={t("due_date")} value={wo.due_date} />
+                <Field label="WO Expiry" value={wo.expiry_date} />
+                <Field label="UOM" value={wo.uom} />
+                <Field label="Revision" value={String(wo.revision ?? 0)} />
+                <Field label="PO File" value={wo.po_file_name || "Not uploaded"} />
               </div>
               <div className="mt-5 pt-5 border-t border-slate-100 flex items-center gap-4">
                 <StatusBadge status={wo.status} testId="work-order-detail-status" />
@@ -90,21 +106,27 @@ function WorkOrderDetailInner() {
                   <thead className="bg-slate-50 text-slate-500">
                     <tr className="text-left">
                       <th className="px-6 py-2.5 text-xs uppercase font-semibold tracking-wide">{t("description")}</th>
+                      <th className="px-6 py-2.5 text-xs uppercase font-semibold tracking-wide">Category</th>
                       <th className="px-6 py-2.5 text-xs uppercase font-semibold tracking-wide">HSN</th>
                       <th className="px-6 py-2.5 text-xs uppercase font-semibold tracking-wide">{t("qty")}</th>
+                      <th className="px-6 py-2.5 text-xs uppercase font-semibold tracking-wide">Billed</th>
+                      <th className="px-6 py-2.5 text-xs uppercase font-semibold tracking-wide">Unit</th>
                       <th className="px-6 py-2.5 text-xs uppercase font-semibold tracking-wide">{t("rate")}</th>
                       <th className="px-6 py-2.5 text-xs uppercase font-semibold tracking-wide">{t("amount")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(wo.items || []).length === 0 && (
-                      <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400">{t("no_data")}</td></tr>
+                      <tr><td colSpan={8} className="px-6 py-8 text-center text-slate-400">{t("no_data")}</td></tr>
                     )}
                     {(wo.items || []).map((it, i) => (
                       <tr key={i} className="border-t border-slate-100" data-testid={`work-order-item-row-${i}`}>
                         <td className="px-6 py-3 text-slate-800">{it.description}</td>
-                        <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.hsn}</td>
+                        <td className="px-6 py-3 text-slate-600">{it.category_scope || "—"}</td>
+                        <td className="px-6 py-3 font-mono text-xs text-slate-500">{it.hsn || "—"}</td>
                         <td className="px-6 py-3 text-slate-700">{it.qty}</td>
+                        <td className="px-6 py-3 text-slate-700">{it.billed_qty}</td>
+                        <td className="px-6 py-3 text-slate-600">{it.unit || "—"}</td>
                         <td className="px-6 py-3 text-slate-700">{formatINR(it.rate)}</td>
                         <td className="px-6 py-3 font-medium text-slate-900">{formatINR(it.qty * it.rate)}</td>
                       </tr>

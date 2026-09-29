@@ -86,6 +86,26 @@ def map_vendor(src: dict) -> dict:
         "site_name": src.get("siteName") or "",
         "account_type": src.get("accountType") or "",
         "expiry_date": src.get("expiryDate") or "",
+        # full mirror of the upstream vendor record
+        "account_holder": src.get("accountHolder") or "",
+        "branch_name": src.get("branchName") or "",
+        "bank_address": src.get("bankAddress") or "",
+        "bank_city": src.get("bankCity") or "",
+        "bank_state": src.get("bankState") or "",
+        "city": src.get("city") or "",
+        "state": (src.get("state") or "").strip(),
+        "pincode": str(src.get("pincode") or ""),
+        "street_address": src.get("streetAddress") or "",
+        "creation_date": src.get("creationDate") or "",
+        "approval_date": src.get("approvalDate") or "",
+        "approved_by": src.get("approvedByName") or "",
+        "checked_by": src.get("checkedByName") or "",
+        "prepared_by": src.get("preparedByName") or "",
+        "created_by": src.get("createdByName") or "",
+        "revision": int(_num(src.get("revision"))),
+        "step": int(_num(src.get("step"))),
+        "updated_at": str(src.get("updatedAt") or ""),
+        "history": src.get("history") or [],
         "synced_at": datetime.now(timezone.utc),
     }
 
@@ -102,6 +122,32 @@ def map_bill_status(src: dict) -> str:
     if "approved" in approval:
         return "under_review"
     return "pending"
+
+
+def map_items(src: dict) -> list[dict]:
+    """Bill / work-order line items, mirrored from the upstream `items` array."""
+    items = []
+    for it in src.get("items") or []:
+        items.append({
+            "description": it.get("description") or it.get("categoryScope") or "",
+            "hsn": it.get("hsn") or "",
+            "qty": _num(it.get("woQty")),
+            "rate": _num(it.get("woRate")),
+            "unit": it.get("unit") or src.get("uom") or "",
+            "billed_qty": _num(it.get("billedQty")),
+            "category_scope": it.get("categoryScope") or "",
+        })
+    if not items and src.get("itemDescription"):
+        items = [{
+            "description": src.get("itemDescription"),
+            "hsn": "",
+            "qty": _num(src.get("quantity")),
+            "rate": 0.0,
+            "unit": src.get("uom") or "",
+            "billed_qty": _num(src.get("quantity")),
+            "category_scope": "",
+        }]
+    return items
 
 
 def map_bill(src: dict, vendor: dict) -> dict:
@@ -152,6 +198,26 @@ def map_bill(src: dict, vendor: dict) -> dict:
         "project_code": src.get("projectCodeLocation") or "",
         "other_deductions": _num(src.get("otherDeductions")),
         "previous_advance": _num(src.get("previousAdvance")),
+        # "Final" section of the workflow portal, mirrored verbatim
+        "approver_name": src.get("approverName") or "",
+        "approval_date": src.get("approvalDate") or "",
+        "account_incharge": src.get("accountInchargeName") or "",
+        "purchase_incharge": src.get("purchaseInchargeName") or "",
+        "site_incharge": src.get("siteInchargeName") or "",
+        "measurement_status": src.get("measurementStatus") or "",
+        "gst_tds_check": src.get("gstTdsCheck") or "",
+        "wo_rate_status": src.get("woRateStatus") or "",
+        "process_date": src.get("processDate") or "",
+        "todo_notes": src.get("todoNotes") or "",
+        "tds_rate": tds_rate,
+        "uom": src.get("uom") or "",
+        "quantity": _num(src.get("quantity")),
+        "bill_serial": int(_num(src.get("billSerial"))),
+        "step": int(_num(src.get("step"))),
+        "revision": int(_num(src.get("revision"))),
+        "updated_at": str(src.get("updatedAt") or ""),
+        "items": map_items(src),
+        "history": src.get("history") or [],
         "synced_at": datetime.now(timezone.utc),
     }
 
@@ -159,21 +225,7 @@ def map_bill(src: dict, vendor: dict) -> dict:
 def map_work_order(src: dict, vendor: dict) -> dict:
     """Work-order data is embedded in each external bill."""
     wo_no = str(src.get("workOrderNo") or "NA")
-    items = []
-    for it in src.get("items") or []:
-        items.append({
-            "description": it.get("description") or it.get("categoryScope") or "",
-            "hsn": it.get("categoryScope") or "",
-            "qty": _num(it.get("woQty")),
-            "rate": _num(it.get("woRate")),
-        })
-    if not items and src.get("itemDescription"):
-        items = [{
-            "description": src.get("itemDescription"),
-            "hsn": "",
-            "qty": _num(src.get("quantity")),
-            "rate": 0.0,
-        }]
+    items = map_items(src)
 
     status = "completed" if map_bill_status(src) == "paid" else "active"
     return {
@@ -198,6 +250,13 @@ def map_work_order(src: dict, vendor: dict) -> dict:
         "created_at": datetime.now(timezone.utc),
         "source": "arun_portal",
         "uom": src.get("uom") or "",
+        "expiry_date": src.get("workOrderExpiryDate") or "",
+        "revision": int(_num(src.get("revision"))),
+        "updated_at": str(src.get("updatedAt") or ""),
+        "po_file_name": (src.get("workOrderFile") or {}).get("name") or "",
+        "po_file_base64": ((src.get("workOrderFile") or {}).get("dataUrl") or "").split(",", 1)[-1],
+        "po_file_type": (src.get("workOrderFile") or {}).get("type") or "application/pdf",
+        "has_po_file": bool((src.get("workOrderFile") or {}).get("dataUrl")),
         "synced_at": datetime.now(timezone.utc),
     }
 

@@ -6,6 +6,8 @@ portal's bills (workOrderNo / workScope / items) by lib/arun.py.
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
+import base64
+
 from lib.auth import current_user
 from lib.db import db
 from lib.pdf import work_order_pdf
@@ -29,6 +31,25 @@ async def get_work_order(wo_id: str, user=Depends(current_user)):
     if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
         raise HTTPException(status_code=403, detail="Not allowed")
     return WorkOrder(**doc)
+
+
+@router.get("/{wo_id}/po-file")
+async def download_po_file(wo_id: str, user=Depends(current_user)):
+    """The original Purchase Order PDF uploaded on the workflow portal."""
+    doc = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
+        raise HTTPException(status_code=403, detail="Not allowed")
+    raw = doc.get("po_file_base64") or ""
+    if not raw:
+        raise HTTPException(status_code=404, detail="No purchase order file on the workflow portal")
+    name = doc.get("po_file_name") or f"{doc['po_number']}.pdf"
+    return Response(
+        content=base64.b64decode(raw),
+        media_type=doc.get("po_file_type", "application/pdf"),
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
 
 
 @router.get("/{wo_id}/pdf")

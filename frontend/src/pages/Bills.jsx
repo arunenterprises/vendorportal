@@ -7,16 +7,31 @@ import StatusBadge from "@/components/StatusBadge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { apiGet } from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import { formatINR, useI18n } from "@/lib/i18n";
 
 const FILTERS = ["all", "pending", "under_review", "paid", "rejected"];
 
+function Field({ label, value, mono }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-[0.12em] text-slate-400 font-semibold">{label}</p>
+      <p className={`text-sm text-slate-900 mt-1 break-words ${mono ? "font-mono text-xs" : ""}`}>
+        {value === 0 ? "0" : value || "—"}
+      </p>
+    </div>
+  );
+}
+
 function BillsInner() {
   const { t } = useI18n();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
+  const [open, setOpen] = useState(null);
 
   const bills = useQuery({ queryKey: ["bills"], queryFn: () => apiGet("/bills"), retry: false });
 
@@ -36,7 +51,10 @@ function BillsInner() {
   }, [bills.data, bills.isError, q, filter]);
 
   return (
-    <AppLayout title={t("nav_bills")} subtitle={t("read_only_note")}>
+    <AppLayout
+      title={t("nav_bills")}
+      subtitle="Live mirror of the workflow portal — open any invoice to see its full approval and final-release details."
+    >
       <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[220px]">
@@ -70,9 +88,9 @@ function BillsInner() {
           <table className="w-full text-sm" data-testid="bills-table">
             <thead className="bg-slate-50 text-slate-500">
               <tr className="text-left">
-                {["invoice_no", "ref_no", "po_number", "invoice_date", "taxable", "gst", "tds", "total", "status", "utr", "actions"].map((h) => (
+                {["invoice_no", "bill_no", "po_number", "invoice_date", "taxable", "gst", "tds", "total", "status", "actions"].map((h) => (
                   <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
-                    {t(h)}
+                    {h === "bill_no" ? "Bill No" : t(h)}
                   </th>
                 ))}
               </tr>
@@ -80,7 +98,7 @@ function BillsInner() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="px-5 py-14 text-center text-slate-400" data-testid="bills-empty">
+                  <td colSpan={10} className="px-5 py-14 text-center text-slate-400" data-testid="bills-empty">
                     {bills.isLoading ? t("loading") : bills.isError ? t("offline_note") : t("no_data")}
                   </td>
                 </tr>
@@ -88,13 +106,14 @@ function BillsInner() {
               {rows.map((b) => (
                 <tr
                   key={b.id}
-                  className="border-t border-slate-100 hover:bg-slate-50/70 [transition:background-color_.18s_ease]"
+                  onClick={() => setOpen(b)}
+                  className="border-t border-slate-100 hover:bg-slate-50/70 cursor-pointer [transition:background-color_.18s_ease]"
                   data-testid={`bill-row-${b.invoice_no}`}
                 >
                   <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-900 whitespace-nowrap">
                     {b.invoice_no}
                   </td>
-                  <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">{b.ref_no || "—"}</td>
+                  <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">{b.bill_no || "—"}</td>
                   <td className="px-4 py-3.5 font-mono text-xs text-[#1D4ED8] whitespace-nowrap">{b.po_number}</td>
                   <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">{b.invoice_date}</td>
                   <td className="px-4 py-3.5 whitespace-nowrap text-slate-700">{formatINR(b.taxable_amount)}</td>
@@ -104,15 +123,15 @@ function BillsInner() {
                     {formatINR(b.total_amount)}
                   </td>
                   <td className="px-4 py-3.5"><StatusBadge status={b.status} label={b.status_label} /></td>
-                  <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                    {b.utr || "—"}
-                  </td>
                   <td className="px-4 py-3.5">
                     <Button
                       variant="outline"
                       size="sm"
                       data-testid={`download-bill-pdf-${b.invoice_no}`}
-                      onClick={() => downloadFile(`/api/bills/${b.id}/pdf`, `${b.invoice_no}.pdf`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadFile(`/api/bills/${b.id}/pdf`, `${b.invoice_no}.pdf`);
+                      }}
                       className="gap-1.5 whitespace-nowrap"
                     >
                       <Download size={14} /> PDF
@@ -124,6 +143,122 @@ function BillsInner() {
           </table>
         </div>
       </Card>
+
+      {/* Full mirror of the workflow portal's bill + final-release record */}
+      <Dialog open={!!open} onOpenChange={(o) => { if (!o) setOpen(null); }}>
+        <DialogContent className="bg-white sm:max-w-[760px] max-h-[88vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{open?.invoice_no}</DialogTitle>
+            <DialogDescription>
+              {open?.vendor_name} · Bill No {open?.bill_no || "—"} · Rev {open?.revision ?? 0}
+            </DialogDescription>
+          </DialogHeader>
+
+          {open && (
+            <div className="space-y-6" data-testid="bill-detail-panel">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <Field label="Ref No" value={open.ref_no} mono />
+                <Field label="Work Order No" value={open.po_number} mono />
+                <Field label="Project / Location" value={open.project_code} />
+                <Field label="Bill Date" value={open.invoice_date} />
+                <Field label="Process Date" value={open.process_date} />
+                <Field label="Due Date" value={open.due_date} />
+                <Field label="Scheduled Due Date" value={open.scheduled_due_date} />
+                <Field label="Priority" value={open.priority_level} />
+              </div>
+
+              <div className="border-t border-slate-100 pt-5">
+                <h3 className="text-sm font-semibold text-slate-900 mb-4">Amounts</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <Field label="Quantity" value={`${open.quantity || 0} ${open.uom || ""}`} />
+                  <Field label="Basic Amount" value={formatINR(open.taxable_amount)} />
+                  <Field label={`GST (${open.gst_rate}%)`} value={formatINR(open.gst_amount)} />
+                  <Field label={`TDS (${open.tds_rate}%)`} value={`-${formatINR(open.tds_amount)}`} />
+                  <Field label="Other Deductions" value={`-${formatINR(open.other_deductions)}`} />
+                  <Field label="Previous Advance" value={`-${formatINR(open.previous_advance)}`} />
+                  <Field label="Payable Total" value={formatINR(open.total_amount)} />
+                  <Field label="Payment Mode" value={open.payment_mode} />
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 pt-5">
+                <h3 className="text-sm font-semibold text-slate-900 mb-4">Verification & Final Release</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <Field label="Measurement" value={open.measurement_status} />
+                  <Field label="WO Rate Check" value={open.wo_rate_status} />
+                  <Field label="GST / TDS Check" value={open.gst_tds_check} />
+                  <Field label="Approval Status" value={open.approval_status} />
+                  <Field label="Final Release" value={open.final_release_status} />
+                  <Field label="Approval Date" value={open.approval_date} />
+                  <Field label="Approver" value={open.approver_name} />
+                  <Field label="Account Incharge" value={open.account_incharge} />
+                  <Field label="Purchase Incharge" value={open.purchase_incharge} />
+                  <Field label="Site Incharge" value={open.site_incharge} />
+                  <Field label="UTR" value={open.utr} mono />
+                  <Field label="Paid Date" value={open.paid_date} />
+                </div>
+                {open.todo_notes && (
+                  <p className="text-xs text-slate-500 mt-4">Notes: {open.todo_notes}</p>
+                )}
+              </div>
+
+              {(open.items || []).length > 0 && (
+                <div className="border-t border-slate-100 pt-5">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Line Items</h3>
+                  <table className="w-full text-xs" data-testid="bill-detail-items">
+                    <thead className="bg-slate-50 text-slate-500">
+                      <tr className="text-left">
+                        {["Description", "Category", "HSN", "WO Qty", "Billed Qty", "Unit", "Rate"].map((h) => (
+                          <th key={h} className="px-3 py-2 font-semibold uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {open.items.map((it, i) => (
+                        <tr key={i} className="border-t border-slate-100">
+                          <td className="px-3 py-2 text-slate-800">{it.description}</td>
+                          <td className="px-3 py-2 text-slate-600">{it.category_scope || "—"}</td>
+                          <td className="px-3 py-2 font-mono text-slate-500">{it.hsn || "—"}</td>
+                          <td className="px-3 py-2 text-slate-700">{it.qty}</td>
+                          <td className="px-3 py-2 text-slate-700">{it.billed_qty}</td>
+                          <td className="px-3 py-2 text-slate-600">{it.unit || "—"}</td>
+                          <td className="px-3 py-2 text-slate-700">{formatINR(it.rate)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {(open.history || []).length > 0 && (
+                <div className="border-t border-slate-100 pt-5">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Change History</h3>
+                  <ol className="space-y-2" data-testid="bill-detail-history">
+                    {open.history.map((h, i) => (
+                      <li key={i} className="text-xs text-slate-600">
+                        <span className="font-semibold text-slate-900">{h.action}</span>
+                        {h.from ? ` (from ${h.from})` : ""} · {h.by} ·{" "}
+                        {h.at ? new Date(h.at).toLocaleString("en-IN") : ""}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-5">
+                <Button
+                  variant="outline"
+                  data-testid="bill-detail-download"
+                  onClick={() => downloadFile(`/api/bills/${open.id}/pdf`, `${open.invoice_no}.pdf`)}
+                  className="gap-2"
+                >
+                  <Download size={15} /> Download Invoice PDF
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
