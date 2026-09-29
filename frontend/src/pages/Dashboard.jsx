@@ -41,7 +41,7 @@ function DashboardInner() {
 
   return (
     <AppLayout
-      title={`${t("nav_dashboard")}`}
+      title="Welcome"
       subtitle={
         user?.role === "vendor"
           ? [vendorQ.data?.company_name || user?.name, vendorQ.data?.code].filter(Boolean).join(" · ")
