@@ -266,6 +266,8 @@ def map_work_order(src: dict, vendor: dict) -> dict:
         "id": _wo_slug(vendor["code"], wo_no),
         "status_label": label,
         "live_stage": live_stage,
+        # "Work Order Status (Auto)" as shown in the workflow portal's bill section
+        "wo_auto_status": (src.get("woRateStatus") or "").strip() or ("Expired" if expired else "Active"),
         "live_stage_date": live_stage_date,
         "next_stage": next_stage,
         "stages_done": len(done),
@@ -378,6 +380,20 @@ async def sync_from_arun() -> dict:
             vendor = doc
 
         wo = map_work_order(src, vendor)
+        # an admin's manual status override wins over the upstream-derived status
+        existing = await db.work_orders.find_one(
+            {"id": wo["id"]},
+            {"_id": 0, "status": 1, "status_overridden": 1, "po_file_base64": 1, "po_file_name": 1, "po_file_type": 1},
+        )
+        if existing and existing.get("status_overridden"):
+            wo["status"] = existing["status"]
+            wo["status_overridden"] = True
+        # a later bill on the same work order may not carry the WO copy — keep the one we have
+        if not wo.get("po_file_base64") and existing and existing.get("po_file_base64"):
+            wo["po_file_base64"] = existing["po_file_base64"]
+            wo["po_file_name"] = existing.get("po_file_name", "")
+            wo["po_file_type"] = existing.get("po_file_type", "application/pdf")
+            wo["has_po_file"] = True
         await db.work_orders.update_one({"id": wo["id"]}, {"$set": wo}, upsert=True)
         work_orders += 1
 

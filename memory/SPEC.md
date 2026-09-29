@@ -162,3 +162,8 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - `map_work_order` derives a live 5-stage pipeline from the upstream bill section: Work order issued -> Bill submitted -> Measurement verified -> Bill approved -> Payment released.
 - Fields on WorkOrder: `live_stage`, `live_stage_date`, `next_stage`, `stages_done`/`stages_total`, `expired` (WO expiry date passed and not paid), `status_label` (verbatim upstream label).
 - UI: Work Orders status column shows badge + live stage with date + "Next: ..." + upstream label; progress bar uses stages_done/stages_total. Detail page shows Live Stage / Next Stage fields.
+
+## Admin work-order status control
+- `PATCH /api/work-orders/{id}/status` (ADMIN ONLY, 403 for vendors; 400 for a status outside active/completed/on_hold) sets `status`, `status_overridden=True`, `status_updated_by/at` and writes a `bill_changes` alert (field `work_order_status`) so the vendor sees it on the dashboard "Recent Updates" immediately.
+- Sync never clobbers an overridden status, and keeps an existing WO copy if a later bill on the same work order has none.
+- Badge colours (both roles): active = green, completed/closed = red, on hold = yellow. Admin rows carry a status dropdown (Active / Closed / On Hold); vendors see the badge only.

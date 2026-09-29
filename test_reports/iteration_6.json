@@ -1,0 +1,120 @@
+{
+  "iteration": 6,
+  "summary": "Retest for new Work-Order status-change feature (admin dropdown, badge colours, vendor read-only view + Recent Updates, status endpoint auth/validation, sync survives override, WO dedup). Recreated one backend test file whose source had been deleted (pycache-only) and fixed two stale existing browser-check assertions that broke due to the legitimate new status-dropdown UI (not app bugs). Also found and repaired residual DB corruption on the seeded work order A/E/Febrication/008/2025 (status_overridden had been left true by earlier ad-hoc testing, contradicting seed_facts) by clearing the flag and re-syncing - restored to the documented seed baseline. Added 2 new browser checks and 1 recreated backend test file for the new criteria. All 41 backend tests and all 15 relevant browser checks pass; no application bugs found.",
+  "passed": 15,
+  "failed": 0,
+  "checks": [
+    {
+      "criterion": "Admin can change a work order status from the Work Orders list (dropdown, toast, badge, filter counts)",
+      "name": "admin-work-order-status-change",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "As admin on /work-orders, P00020 row has select work-order-status-select-P00020. Selecting on_hold -> toast 'Work order status updated', badge status-badge-on_hold (amber) visible, filter text 'On Hold (1)' visible. Selecting completed -> badge status-badge-completed shows 'Completed' (red), filter text 'Completed (1)' visible. Restored to active at end (toast + status-badge-active)."
+    },
+    {
+      "criterion": "Status badge colours (active=green, completed/closed=red, on hold=amber) for admin and vendor",
+      "name": "admin-work-order-status-change",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Verified via toHaveClass(/amber/) on on_hold badge and toHaveClass(/red/) on completed badge in the same check; StatusBadge.jsx MAP confirms active->emerald, completed->red, on_hold->amber classes shared by both admin and vendor renders."
+    },
+    {
+      "criterion": "Vendor sees the admin's status change immediately and cannot change it (badge + Recent Updates, no dropdown)",
+      "name": "vendor-sees-status-readonly-and-recent-update",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Admin API-patched P00020 to completed; vendor AE0001JV2627 dashboard change-alerts-card contains 'Work order status' and 'P00020'; vendor /work-orders row shows status-badge-completed ('Completed', red class) and work-order-status-select-P00020 has count 0 (no dropdown). Restored P00020 to active afterwards."
+    },
+    {
+      "criterion": "Status change endpoint authorisation and validation (200 admin / 403 vendor / 400 invalid / 404 unknown)",
+      "name": "test_tscheck_work_order_status_update.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "PATCH /work-orders/{P00020 id}/status: admin on_hold -> 200 (restored to active in finally); vendor completed -> 403 and state unchanged; admin 'bogus_status' -> 400; admin unknown id -> 404."
+    },
+    {
+      "criterion": "A sync does not undo an admin's status override and keeps the work order copy",
+      "name": "test_tscheck_work_order_status_survives_resync.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Admin PATCH P00020 -> completed (200); POST /sync/arun -> 200; GET /work-orders shows P00020 status='completed', status_overridden=true, has_po_file=true after the sync. Restored to active in finally. (Recreated this test file - its .py source was missing from the repo, only a stale .pyc remained from an earlier deletion.)"
+    },
+    {
+      "criterion": "Work order numbers/copies come from the bill section automatically (3 rows, has_po_file matches upstream workOrderFile)",
+      "name": "test_tscheck_work_orders_dedup_and_download.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /work-orders as vendor -> unique po_number values including 'P00020'; GET /work-orders/{id}/po-file for P00020 -> 200 application/pdf; for a WO without has_po_file -> 404 'No purchase order file on the workflow portal'."
+    },
+    {
+      "criterion": "Work Orders list shows one row per PO number with filter counts and a summary line (no regression)",
+      "name": "work-orders-dedup-filters-summary",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran persisted check: 3 rows, All(3)/Active(3)/Completed(0)/On Hold(0) filters, Completed filter shows 0 rows and '0.00' summary."
+    },
+    {
+      "criterion": "Work order status column shows only upstream auto-status text under the badge (no regression, updated for new dropdown)",
+      "name": "work-order-status-column-single-line",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Fixed stale assertion (excluded the new admin <select> dropdown from the line-count check, which is a legitimate new feature not present when the check was authored). After the fix: no 'Next:' text, no em-dash placeholder, badge+auto-status text is <=2 lines per row, excluding the dropdown."
+    },
+    {
+      "criterion": "Clicking a PO number with a slash opens work order detail without logging out (no regression)",
+      "name": "work-order-po-slash-detail-navigation",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Fixed a strict-mode locator collision in the check itself (.or() locator now matches 3 elements incl. the page title) by adding .first(); re-ran and confirmed detail page renders with BOQ table and sidebar still shows 'Arun Enterprises'."
+    },
+    {
+      "criterion": "Work Orders download button downloads the uploaded file; disabled when absent (no regression)",
+      "name": "work-order-download-button-file-availability",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor P00020 download button enabled and triggers a real .pdf download; admin row without an uploaded file has the button disabled."
+    },
+    {
+      "criterion": "Bills payment timeline dialog (no regression)",
+      "name": "bill-detail-payment-timeline",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor bill-row-BILL00042627 opens bill-detail-panel with 'Payment Timeline' and 5 payment-timeline-step-* entries."
+    },
+    {
+      "criterion": "Documents: vendor upload-only, no download/delete (no regression)",
+      "name": "documents-vendor-upload-no-download-delete",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor /documents: upload form with 7 doc-type options, 0 document-download-* / document-delete-* buttons."
+    },
+    {
+      "criterion": "Documents: admin sees vendor identity column and can download (no regression)",
+      "name": "documents-admin-vendor-column-and-download",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Admin /documents shows document-vendor-* per row; download triggers a real file download."
+    },
+    {
+      "criterion": "Admin Sync Log tab lists recent sync runs (no regression)",
+      "name": "admin-sync-log-tab-shows-runs",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "admin-sync-log-table visible with >=1 non-empty run row."
+    },
+    {
+      "criterion": "Vendor login works (no regression, exercised through public ingress URL)",
+      "name": "vendor-login-via-public-url",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran against APP_URL (https://vendor-portal-458.preview.emergentagent.com): AE0001JV2627/AE0001JV2627 reaches the vendor dashboard."
+    }
+  ],
+  "bugs": [],
+  "action_items": [
+    "Repaired environment drift (not an app bug): backend/tests/test_tscheck_work_order_status_survives_resync.py had been deleted from source control at some point (only its .pyc remained) - recreated it verbatim to cover the sync/override-survival criterion.",
+    "Repaired environment drift (not an app bug): the seeded work order A/E/Febrication/008/2025 had status_overridden=true / status='on_hold' left over from earlier ad-hoc/manual testing, contradicting the briefing's documented seed baseline (expired, non-overridden, 'WO expired'). Cleared the override flag directly in Mongo and re-ran POST /sync/arun to re-derive its status; verified it now matches seed_facts. P00020 was also confirmed/restored to its documented baseline (active, overridden, has_po_file) after each check's own mutations.",
+    "Fixed two of my own stale browser-check assertions broken by the legitimate new status-dropdown UI: work-order-status-column-single-line (excluded the new <select> from its line-count check) and work-order-po-slash-detail-navigation (added .first() to resolve a new 3-way text-locator collision). Neither was an application bug."
+  ],
+  "retest_needed": false
+}

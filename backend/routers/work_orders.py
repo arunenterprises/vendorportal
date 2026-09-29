@@ -7,11 +7,13 @@ portal's bills (workOrderNo / workScope / items) by lib/arun.py.
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 import base64
+from datetime import datetime, timezone
+from uuid import uuid4
 
-from lib.auth import current_user
+from lib.auth import admin_user, current_user
 from lib.db import db
 from lib.pdf import work_order_pdf
-from models.schemas import WorkOrder
+from models.schemas import WorkOrder, WorkOrderStatusUpdate
 
 router = APIRouter(prefix="/work-orders", tags=["work-orders"])
 
@@ -31,6 +33,40 @@ async def get_work_order(wo_id: str, user=Depends(current_user)):
     if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
         raise HTTPException(status_code=403, detail="Not allowed")
     return WorkOrder(**doc)
+
+
+@router.patch("/{wo_id}/status", response_model=WorkOrder)
+async def update_status(wo_id: str, payload: WorkOrderStatusUpdate, user=Depends(admin_user)):
+    """Admin-only manual status override; the vendor sees it immediately."""
+    doc = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    if payload.status not in ("active", "completed", "on_hold"):
+        raise HTTPException(status_code=400, detail="Status must be active, completed or on_hold")
+    before = doc.get("status", "")
+    await db.work_orders.update_one(
+        {"id": wo_id},
+        {"$set": {
+            "status": payload.status,
+            "status_overridden": True,
+            "status_updated_at": datetime.now(timezone.utc),
+            "status_updated_by": user.get("name") or user.get("email"),
+        }},
+    )
+    if before != payload.status:
+        await db.bill_changes.insert_one({
+            "id": str(uuid4()),
+            "vendor_id": doc["vendor_id"],
+            "bill_id": doc["id"],
+            "invoice_no": doc["po_number"],
+            "field": "work_order_status",
+            "label": "Work order status",
+            "from_value": before,
+            "to_value": payload.status,
+            "changed_at": datetime.now(timezone.utc),
+        })
+    fresh = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
+    return WorkOrder(**fresh)
 
 
 @router.get("/{wo_id}/po-file")

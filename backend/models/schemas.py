@@ -91,6 +91,12 @@ class PortalUserCreate(BaseModel):
     password: Optional[str] = None
 
 
+class WorkOrderStatusUpdate(BaseModel):
+    """Admin-only manual status override for a work order."""
+
+    status: str
+
+
 class PasswordReset(BaseModel):
     password: str
 
@@ -153,11 +159,14 @@ class WorkOrder(BaseModel):
     has_po_file: bool = False
     status_label: str = ""
     live_stage: str = ""
+    wo_auto_status: str = ""
     live_stage_date: str = ""
     next_stage: str = ""
     stages_done: int = 0
     stages_total: int = 0
     expired: bool = False
+    status_overridden: bool = False
+    status_updated_by: str = ""
     synced_at: datetime | None = None
 
 

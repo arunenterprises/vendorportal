@@ -1,0 +1,97 @@
+{
+  "iteration": 5,
+  "summary": "New 8-criterion briefing (Work Orders dedup/filters/status-column, PO-slash detail nav, WO file download, Bills payment timeline, Documents role-based actions, Admin Sync Log tab, vendor login). Fixed a stale pre-existing backend test (test_tscheck_sync_idempotent.py hardcoded 1 vendor/order/bill from an older seed; current seed is 12/3/3 per briefing seed_facts) so the full backend suite is green again. Added 4 new backend test files (work-orders dedup+download, admin sync log, documents role access) and 8 new browser checks, one per matrix criterion (vendor login reused an existing passing check). All 8 UI criteria and all backend tests pass; no application bugs found.",
+  "passed": 12,
+  "failed": 0,
+  "checks": [
+    {
+      "criterion": "Vendor login works with vendor code as both id and password",
+      "name": "vendor-login-dashboard-kpis",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Re-ran pre-existing check: AE0001JV2627/AE0001JV2627 (and lowercase variant) reaches /dashboard with all 4 KPI tiles populated; wrong password stays on /login with an error toast."
+    },
+    {
+      "criterion": "Work Orders list shows one row per PO number with filter counts and a summary line",
+      "name": "work-orders-dedup-filters-summary",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "As admin on /work-orders: 3 rows with distinct PO numbers, filters read All (3)/Active (3)/Completed (0)/On Hold (0); clicking Completed shows 0 rows and summary text containing '0 work order' and '0.00'."
+    },
+    {
+      "criterion": "Work Orders list has one row per PO number (backend dedup + downloadable file)",
+      "name": "test_tscheck_work_orders_dedup_and_download.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /work-orders as vendor -> po_number values unique, includes 'P00020'. GET /work-orders/{id}/po-file for P00020 -> 200, application/pdf, non-empty body. GET .../po-file for a WO without has_po_file -> 404 'No purchase order file on the workflow portal'."
+    },
+    {
+      "criterion": "Work order status column shows only the upstream auto status text under the badge",
+      "name": "work-order-status-column-single-line",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Admin /work-orders: no 'Next:' text anywhere; each of the 3 status cells has <=2 lines of text and none contain a lone em-dash placeholder."
+    },
+    {
+      "criterion": "Clicking a PO number opens the work order detail page and does not log the user out",
+      "name": "work-order-po-slash-detail-navigation",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Clicked the PO link containing '/' (A/E/Febrication/008/2025) -> navigated to /work-orders/<id>, PO number text and BOQ table (work-order-items-table) visible; sidebar-user-name still shows 'Arun Enterprises' (not logged out)."
+    },
+    {
+      "criterion": "Work Orders 'Work Order' action downloads the original uploaded file; disabled when absent",
+      "name": "work-order-download-button-file-availability",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor row P00020: download-work-order-P00020 button enabled, click triggers a real browser download with a .pdf filename. Admin row A/E/Febrication/008/2025 (no uploaded file): button is disabled, not erroring."
+    },
+    {
+      "criterion": "Admin Sync Log lists recent sync runs (backend)",
+      "name": "test_tscheck_admin_sync_log.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "GET /sync/runs as admin -> 200, >=1 run with synced_at + vendors/work_orders/bills keys. GET /sync/runs as vendor -> 403."
+    },
+    {
+      "criterion": "Bills page bill detail dialog shows the payment timeline",
+      "name": "bill-detail-payment-timeline",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "As vendor, clicking bill-row-BILL00042627 opens bill-detail-panel containing 'Payment Timeline' heading and payment-timeline with 5 dated payment-timeline-step-* entries."
+    },
+    {
+      "criterion": "Documents: vendor can upload but cannot download or delete",
+      "name": "documents-vendor-upload-no-download-delete",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Vendor /documents: upload form visible with exactly 7 doc-type options and a '100 KB' size hint; documents table has 0 document-download-* and 0 document-delete-* buttons."
+    },
+    {
+      "criterion": "Documents: admin sees vendor identity column and can download",
+      "name": "documents-admin-vendor-column-and-download",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Admin /documents table shows document-vendor-* column per row; clicking document-download-* triggers a real file download."
+    },
+    {
+      "criterion": "Documents role access (backend): vendor upload allowed, download/delete forbidden; admin download allowed and sees vendor identity",
+      "name": "test_tscheck_documents_role_access.py",
+      "lane": "backend",
+      "status": "passed",
+      "evidence": "Vendor POST /documents (fixture tscheck-doc-role-fixture) -> 200; vendor GET .../download -> 403; vendor DELETE ... -> 403. Admin GET /documents shows vendor_code='AE0001JV2627' for that doc; admin GET .../download -> 200 non-empty body; admin then deletes its own fixture. Vendor POST with disallowed doc_type 'Passport' -> 400."
+    },
+    {
+      "criterion": "Admin Sync Log tab lists recent sync runs (UI)",
+      "name": "admin-sync-log-tab-shows-runs",
+      "lane": "browser",
+      "status": "passed",
+      "evidence": "Admin Command Center -> Sync Log tab: admin-sync-log-table visible with at least one non-empty row (run timestamp + vendors/work orders/bills counts)."
+    }
+  ],
+  "bugs": [],
+  "action_items": [
+    "Fixed a stale pre-existing backend test (test_tscheck_sync_idempotent.py) whose hardcoded counts (1/1/1) no longer matched the current seed data (12 vendors/3 work orders/3 bills); updated to assert idempotency generically. Not an application bug - a test-data drift from an earlier iteration."
+  ],
+  "retest_needed": false
+}

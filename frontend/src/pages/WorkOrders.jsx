@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Download, Search } from "lucide-react";
+import { useAuth } from "@/lib/useAuth";
 import AppLayout from "@/components/AppLayout";
 import RequireAuth from "@/components/RequireAuth";
 import StatusBadge from "@/components/StatusBadge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPatch } from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import { formatINR, useI18n } from "@/lib/i18n";
 
@@ -16,8 +18,20 @@ const FILTERS = ["all", "active", "completed", "on_hold"];
 
 function WorkOrdersInner() {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
+
+  const setStatus = useMutation({
+    mutationFn: ({ id, status }) => apiPatch(`/work-orders/${id}/status`, { status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["work-orders"] });
+      toast.success("Work order status updated");
+    },
+    onError: (e) => toast.error(e.message || "Could not update status"),
+  });
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["work-orders"],
@@ -25,10 +39,26 @@ function WorkOrdersInner() {
     retry: false,
   });
 
-  const rows = useMemo(() => {
+  const all = useMemo(() => {
     const list = isError ? [] : data ?? [];
+    // one row per PO number, even when several bills share the same work order
+    const seen = new Map();
+    for (const o of list) if (!seen.has(o.po_number)) seen.set(o.po_number, o);
+    return [...seen.values()];
+  }, [data, isError]);
+
+  const counts = useMemo(() => {
+    const out = {};
+    for (const f of FILTERS) {
+      const list = f === "all" ? all : all.filter((o) => o.status === f);
+      out[f] = { count: list.length, value: list.reduce((s, o) => s + (o.value || 0), 0) };
+    }
+    return out;
+  }, [all]);
+
+  const rows = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return list.filter((o) => {
+    return all.filter((o) => {
       const matchStatus = filter === "all" || o.status === filter;
       const matchTerm =
         !term ||
@@ -37,7 +67,7 @@ function WorkOrdersInner() {
         (o.vendor_name || "").toLowerCase().includes(term);
       return matchStatus && matchTerm;
     });
-  }, [data, isError, q, filter]);
+  }, [all, q, filter]);
 
   return (
     <AppLayout title={t("nav_work_orders")} subtitle={t("login_sub")}>
@@ -64,10 +94,23 @@ function WorkOrdersInner() {
                     ? "bg-[#0B132B] text-white border-[#0B132B]"
                     : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
               >
-                {f === "all" ? t("all") : t(`status_${f}`)}
+                {f === "all" ? t("all") : t(`status_${f}`)} ({counts[f]?.count ?? 0})
               </button>
             ))}
           </div>
+        </div>
+
+        <div
+          className="px-5 py-2.5 border-b border-slate-100 bg-slate-50/60 text-xs text-slate-600"
+          data-testid="work-orders-summary"
+        >
+          <span className="font-semibold text-slate-900">
+            {filter === "all" ? t("all") : t(`status_${filter}`)}
+          </span>{" "}
+          · {rows.length} work order{rows.length === 1 ? "" : "s"} · Total value{" "}
+          <span className="font-semibold text-slate-900">
+            {formatINR(rows.reduce((s, o) => s + (o.value || 0), 0))}
+          </span>
         </div>
 
         <div className="overflow-x-auto">
@@ -127,19 +170,26 @@ function WorkOrdersInner() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">{o.due_date}</td>
-                    <td className="px-5 py-3.5 min-w-[170px]">
-                      <StatusBadge status={o.expired ? "on_hold" : o.status} />
-                      <p className="text-[11px] text-slate-700 mt-1 font-medium" data-testid={`work-order-live-stage-${o.po_number}`}>
-                        {o.expired ? "WO expired" : o.live_stage}
-                        {o.live_stage_date ? ` · ${o.live_stage_date}` : ""}
-                      </p>
-                      {o.next_stage ? (
-                        <p className="text-[11px] text-slate-400">Next: {o.next_stage}</p>
-                      ) : null}
-                      {o.status_label ? (
-                        <p className="text-[11px] text-[#1D4ED8] mt-0.5" data-testid={`work-order-status-label-${o.po_number}`}>
-                          {o.status_label}
+                    <td className="px-5 py-3.5 min-w-[150px]">
+                      <StatusBadge status={o.status} />
+                      {o.wo_auto_status || o.expired ? (
+                        <p className="text-[11px] text-slate-600 mt-1" data-testid={`work-order-status-label-${o.po_number}`}>
+                          {o.expired ? "WO expired" : o.wo_auto_status}
                         </p>
+                      ) : null}
+                      {isAdmin ? (
+                        <select
+                          value={o.status}
+                          onChange={(e) => setStatus.mutate({ id: o.id, status: e.target.value })}
+                          data-testid={`work-order-status-select-${o.po_number}`}
+                          className="mt-1.5 text-[11px] border border-slate-200 rounded-md px-1.5 py-1 bg-white text-slate-700
+                            hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-[#1D4ED8]
+                            [transition:border-color_.18s_ease]"
+                        >
+                          <option value="active">Active</option>
+                          <option value="completed">Closed</option>
+                          <option value="on_hold">On Hold</option>
+                        </select>
                       ) : null}
                     </td>
                     <td className="px-5 py-3.5">
@@ -147,17 +197,11 @@ function WorkOrdersInner() {
                         variant="outline"
                         size="sm"
                         data-testid={`download-work-order-${o.po_number}`}
-                        onClick={() =>
-                          downloadFile(
-                            o.has_po_file
-                              ? `/api/work-orders/${o.id}/po-file`
-                              : `/api/work-orders/${o.id}/pdf`,
-                            o.has_po_file ? o.po_file_name || `${o.po_number}.pdf` : `${o.po_number}.pdf`,
-                          )
-                        }
+                        onClick={() => downloadFile(`/api/work-orders/${o.id}/po-file`, o.po_file_name || `${o.po_number}.pdf`)}
+                        disabled={!o.has_po_file}
                         className="gap-1.5 whitespace-nowrap"
                       >
-                        <Download size={14} /> {o.has_po_file ? "Work Order" : "PDF"}
+                        <Download size={14} /> Work Order
                       </Button>
                     </td>
                   </tr>
