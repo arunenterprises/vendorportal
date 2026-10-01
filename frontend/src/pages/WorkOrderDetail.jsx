@@ -76,15 +76,29 @@ function WorkOrderDetailInner() {
             <Card className="p-6 bg-white border-slate-200 rounded-xl shadow-sm">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
                 <Field label={t("po_number")} value={wo.po_number} mono />
+                <Field label="Vendor Code" value={wo.vendor_code} mono />
                 <Field label={t("value")} value={formatINR(wo.value)} />
                 <Field label={t("issued_date")} value={wo.issued_date} />
-                <Field label={t("due_date")} value={wo.due_date} />
                 <Field label="WO Expiry" value={wo.expiry_date} />
-                <Field label="Bill Status" value={wo.status_label} />
-                <Field label="Live Stage" value={wo.expired ? "WO expired" : wo.live_stage} />
-                <Field label="Next Stage" value={wo.next_stage || "Completed"} />
+                {wo.origin === "purchase_department" ? (
+                  <>
+                    <Field label="Approval Status" value={wo.status_label} />
+                    <Field label="Approved By" value={wo.approved_by} />
+                    <Field label="Approval Date" value={wo.approval_date} />
+                    <Field label="Client" value={wo.client_name} />
+                    <Field label="Project Site" value={wo.project_site} />
+                    <Field label="BOQ Ref" value={wo.boq_ref_no} mono />
+                  </>
+                ) : (
+                  <>
+                    <Field label={t("due_date")} value={wo.due_date} />
+                    <Field label="Bill Status" value={wo.status_label} />
+                    <Field label="Live Stage" value={wo.expired ? "WO expired" : wo.live_stage} />
+                    <Field label="Next Stage" value={wo.next_stage || "Completed"} />
+                  </>
+                )}
                 <Field label="UOM" value={wo.uom} />
-                <Field label="PO File" value={wo.po_file_name || "Not uploaded"} />
+                <Field label="WO Copy" value={wo.po_file_name || "Not uploaded"} />
               </div>
               <div className="mt-5 pt-5 border-t border-slate-100 flex items-center gap-4">
                 <StatusBadge status={wo.status} testId="work-order-detail-status" />
@@ -98,6 +112,20 @@ function WorkOrderDetailInner() {
                 {wo.scope || "—"}
               </p>
             </Card>
+
+            {wo.origin === "purchase_department" && (
+              <Card className="p-6 bg-white border-slate-200 rounded-xl shadow-sm" data-testid="work-order-terms">
+                <h2 className="text-base font-semibold text-slate-900 mb-5">Work Order Terms</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <Field label="Payment Terms" value={wo.payment_terms} />
+                  <Field label="Delivery Terms" value={wo.delivery_terms} />
+                  <Field label="Warranty" value={wo.warranty_clause} />
+                  <Field label="Penalty" value={wo.penalty_clause} />
+                  <Field label="Retention %" value={wo.retention_pct ? `${wo.retention_pct}%` : "—"} />
+                  <Field label="GST Slab" value={wo.gst_slab ? `${wo.gst_slab}%` : "—"} />
+                </div>
+              </Card>
+            )}
 
             <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200">

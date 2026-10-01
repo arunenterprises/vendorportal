@@ -167,6 +167,19 @@ class WorkOrder(BaseModel):
     expired: bool = False
     status_overridden: bool = False
     status_updated_by: str = ""
+    origin: str = ""
+    vendor_code: str = ""
+    approved_by: str = ""
+    approval_date: str = ""
+    client_name: str = ""
+    project_site: str = ""
+    boq_ref_no: str = ""
+    payment_terms: str = ""
+    delivery_terms: str = ""
+    warranty_clause: str = ""
+    penalty_clause: str = ""
+    retention_pct: float = 0
+    gst_slab: float = 0
     synced_at: datetime | None = None
 
 

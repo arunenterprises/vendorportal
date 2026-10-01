@@ -304,7 +304,77 @@ def map_work_order(src: dict, vendor: dict) -> dict:
     }
 
 
-async def fetch_remote() -> tuple[list[dict], list[dict]]:
+def map_purchase_wo(src: dict, vendor: dict) -> dict:
+    """APPROVED work order from the workflow portal's Purchase Department section.
+
+    Linked to this portal by vendorCode + woNo.
+    """
+    wo_no = str(src.get("woNo") or "NA")
+    items = [
+        {
+            "description": it.get("description") or "",
+            "hsn": it.get("hsn") or "",
+            "qty": _num(it.get("qty")),
+            "rate": _num(it.get("rate")),
+            "unit": it.get("unit") or "",
+            "billed_qty": 0.0,
+            "category_scope": "",
+        }
+        for it in src.get("items") or []
+    ]
+    expiry = str(src.get("expiryDate") or "")
+    expired = bool(expiry and expiry < today_iso("Asia/Kolkata"))
+    first = items[0]["description"] if items else (src.get("scopeOfWork") or "")
+    title = f"{first} (+{len(items) - 1} more)" if len(items) > 1 else (first or wo_no)
+
+    return {
+        "id": _wo_slug(vendor["code"], wo_no),
+        "vendor_id": vendor["id"],
+        "vendor_name": vendor["company_name"],
+        "vendor_code": vendor["code"],
+        "po_number": wo_no,
+        "title": title,
+        "scope": src.get("scopeOfWork") or src.get("termsAndConditions") or "",
+        "value": _num(src.get("total")),
+        "status": "completed" if expired else "active",
+        "issued_date": str(src.get("woDate") or ""),
+        "due_date": expiry,
+        "expiry_date": expiry,
+        "expired": expired,
+        "milestones": [
+            {"title": "Work order approved", "done": bool(src.get("approvalDate")), "due_date": str(src.get("approvalDate") or "")},
+            {"title": "Delivery at site", "done": False, "due_date": str(src.get("woDate") or "")},
+            {"title": "Work order expiry", "done": expired, "due_date": expiry},
+        ],
+        "items": items,
+        "created_at": datetime.now(timezone.utc),
+        "source": "arun_portal",
+        "origin": "purchase_department",
+        "wo_auto_status": "Approved Work Order",
+        "status_label": "Approved",
+        "approved_by": src.get("approvedByName") or "",
+        "approval_date": str(src.get("approvalDate") or ""),
+        "prepared_by": src.get("preparedBy") or "",
+        "client_name": src.get("clientName") or "",
+        "project_site": src.get("projectSite") or "",
+        "boq_ref_no": src.get("boqRefNo") or "",
+        "payment_terms": src.get("paymentTerms") or "",
+        "delivery_terms": src.get("deliveryTerms") or "",
+        "warranty_clause": src.get("warrantyClause") or "",
+        "penalty_clause": src.get("penaltyClause") or "",
+        "retention_pct": _num(src.get("retentionPct")),
+        "gst_slab": _num(src.get("gstSlab")),
+        "uom": items[0]["unit"] if items else "",
+        "updated_at": str(src.get("updatedAt") or ""),
+        "po_file_name": src.get("attachmentName") or "",
+        "po_file_base64": str(src.get("attachmentData") or "").split(",", 1)[-1],
+        "po_file_type": "application/pdf",
+        "has_po_file": bool(src.get("attachmentData")),
+        "synced_at": datetime.now(timezone.utc),
+    }
+
+
+async def fetch_remote() -> tuple[list[dict], list[dict], list[dict]]:
     base, identifier, password = _cfg()
     if not base or not identifier or not password:
         raise ArunPortalError("Arun portal credentials are not configured in backend/.env")
@@ -314,6 +384,7 @@ async def fetch_remote() -> tuple[list[dict], list[dict]]:
         headers = {"Authorization": f"Bearer {token}"}
         v_res = await client.get(f"{base}/api/vendors", headers=headers)
         b_res = await client.get(f"{base}/api/bills", headers=headers)
+        w_res = await client.get(f"{base}/api/work_orders", headers=headers)
 
     if v_res.status_code != 200:
         raise ArunPortalError(f"Could not read vendors from Arun portal ({v_res.status_code})")
@@ -322,7 +393,16 @@ async def fetch_remote() -> tuple[list[dict], list[dict]]:
 
     vendors = [v for v in v_res.json() if str(v.get("vendorCode") or "").strip()]
     bills = [b for b in b_res.json() if str(b.get("permanentBillNo") or b.get("billNo") or "").strip()]
-    return vendors, bills
+    # purchase department work orders — approved ones only
+    purchase_wos = []
+    if w_res.status_code == 200:
+        purchase_wos = [
+            w for w in w_res.json()
+            if str(w.get("woNo") or "").strip()
+            and str(w.get("vendorCode") or "").strip()
+            and (str(w.get("approvalDate") or "").strip() or int(_num(w.get("step"))) >= 4)
+        ]
+    return vendors, bills, purchase_wos
 
 
 async def sync_from_arun() -> dict:
@@ -331,7 +411,7 @@ async def sync_from_arun() -> dict:
     A vendor's portal login is created on first sync with their vendorCode as the
     password, so each firm can sign in and see only its own records.
     """
-    remote_vendors, remote_bills = await fetch_remote()
+    remote_vendors, remote_bills, remote_purchase_wos = await fetch_remote()
 
     vendors_by_code: dict[str, dict] = {}
     for src in remote_vendors:
@@ -371,6 +451,25 @@ async def sync_from_arun() -> dict:
     work_orders, bills, skipped, changes = 0, 0, [], 0
     seen_wo_ids: set[str] = set()
     seen_invoice_nos: set[str] = set()
+
+    # ---- approved work orders from the purchase department ----
+    purchase_count = 0
+    for src in remote_purchase_wos:
+        code = str(src.get("vendorCode") or "").strip()
+        vendor = vendors_by_code.get(code) or await db.vendors.find_one({"code": code}, {"_id": 0})
+        if not vendor:
+            continue
+        wo = map_purchase_wo(src, vendor)
+        seen_wo_ids.add(wo["id"])
+        existing = await db.work_orders.find_one(
+            {"id": wo["id"]}, {"_id": 0, "status": 1, "status_overridden": 1}
+        )
+        if existing and existing.get("status_overridden"):
+            wo["status"] = existing["status"]
+            wo["status_overridden"] = True
+        await db.work_orders.update_one({"id": wo["id"]}, {"$set": wo}, upsert=True)
+        purchase_count += 1
+
     for src in remote_bills:
         code = str(src.get("vendorCode") or "").strip()
         vendor = vendors_by_code.get(code)
@@ -446,6 +545,7 @@ async def sync_from_arun() -> dict:
     result = {
         "vendors": len(vendors_by_code),
         "work_orders": work_orders,
+        "purchase_work_orders": purchase_count,
         "bills": bills,
         "changes": changes,
         "removed_work_orders": removed_wo.deleted_count,

@@ -176,3 +176,9 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 ## UI trims (user requests)
 - Change History removed from Vendor Details and the bill detail dialog; "Revision"/"Rev" fields removed from Vendor Details, Work Order detail and the bill dialog header (data still present in the API, just not shown).
 - Page header: title 38px, subtitle (firm name · vendor code) 16px semibold slate-700.
+
+## Purchase department approved work orders
+- Upstream endpoint `GET /api/work_orders` (purchase department section) is now synced. Only APPROVED ones are taken (approvalDate set or step >= 4).
+- Linked by vendorCode + woNo -> local id `arun-wo-<vendorCode>-<woNo slug>`, `origin: "purchase_department"`.
+- Mapped fields: woNo -> po_number, total -> value, woDate -> issued_date, expiryDate -> due_date/expiry_date, items (description/qty/unit/rate), approvedByName, approvalDate, preparedBy, clientName, projectSite, boqRefNo, paymentTerms, deliveryTerms, warrantyClause, penaltyClause, retentionPct, gstSlab, attachmentData -> WO copy.
+- UI: Work Orders list shows an "Approved WO" tag under the PO number; detail page shows Vendor Code, approval block (status/approved by/date/client/site/BOQ ref) and a "Work Order Terms" card. Sync result + Sync Log carry `purchase_work_orders`.

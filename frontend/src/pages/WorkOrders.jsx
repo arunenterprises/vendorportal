@@ -150,6 +150,14 @@ function WorkOrdersInner() {
                       >
                         {o.po_number}
                       </Link>
+                      {o.origin === "purchase_department" ? (
+                        <span
+                          className="block mt-1 text-[10px] uppercase tracking-wide text-emerald-700 font-semibold"
+                          data-testid={`work-order-origin-${o.po_number}`}
+                        >
+                          Approved WO
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-5 py-3.5 max-w-[320px]">
                       <p className="text-slate-900 line-clamp-1">{o.title}</p>
