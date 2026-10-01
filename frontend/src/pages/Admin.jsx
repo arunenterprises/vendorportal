@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Building2, KeyRound, RefreshCw, Trash2, UserPlus } from "lucide-react";
+import { Building2, KeyRound, RefreshCw, Trash2, UserPlus, Eye, EyeOff } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import RequireAuth from "@/components/RequireAuth";
 import StatusBadge from "@/components/StatusBadge";
@@ -80,6 +80,15 @@ function AdminInner() {
       setForm(EMPTY_USER);
     },
     onError: (e) => toast.error(e?.body?.detail || t("user_create_failed")),
+  });
+
+  const setOrderLive = useMutation({
+    mutationFn: ({ id, live }) => apiPatch(`/work-orders/${id}/visibility`, { live }),
+    onSuccess: (wo) => {
+      qc.invalidateQueries({ queryKey: ["work-orders"] });
+      toast.success(wo.live ? "Work order is live for the vendor" : "Work order taken off-air");
+    },
+    onError: (e) => toast.error(e.message || "Could not update visibility"),
   });
 
   const resetPw = useMutation({
@@ -517,11 +526,14 @@ function AdminInner() {
                     {["po_number", "vendor", "title", "value", "status"].map((h) => (
                       <th key={h} className="px-5 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{t(h)}</th>
                     ))}
+                    <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
+                      Vendor Visibility
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {orderRows.length === 0 && (
-                    <tr><td colSpan={5} className="px-5 py-14 text-center text-slate-400" data-testid="admin-orders-empty">{t("no_data")}</td></tr>
+                    <tr><td colSpan={6} className="px-5 py-14 text-center text-slate-400" data-testid="admin-orders-empty">{t("no_data")}</td></tr>
                   )}
                   {orderRows.map((o) => (
                     <tr key={o.id} className="border-t border-slate-100" data-testid={`admin-order-row-${o.po_number}`}>
@@ -530,6 +542,22 @@ function AdminInner() {
                       <td className="px-5 py-3.5 text-slate-900 max-w-[280px] truncate">{o.title}</td>
                       <td className="px-5 py-3.5 whitespace-nowrap font-medium">{formatINR(o.value)}</td>
                       <td className="px-5 py-3.5"><StatusBadge status={o.status} /></td>
+                      <td className="px-5 py-3.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          data-testid={`admin-order-live-toggle-${o.po_number}`}
+                          onClick={() => setOrderLive.mutate({ id: o.id, live: o.live === false })}
+                          className={`h-8 gap-1.5 text-xs ${
+                            o.live === false
+                              ? "text-slate-600 border-slate-200"
+                              : "text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                          }`}
+                        >
+                          {o.live === false ? <EyeOff size={13} /> : <Eye size={13} />}
+                          {o.live === false ? "Off-Air" : "Live"}
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

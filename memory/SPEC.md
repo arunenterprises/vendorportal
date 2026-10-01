@@ -200,3 +200,4 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - UI: Admin Command Center -> Work Orders tab -> "Upload Original Work Order" card: vendor Select -> work order Select -> file input (pdf/image, client-side 500 KB guard) -> Upload. Shows the currently attached copy name.
 - Sync preserves an admin-uploaded copy when the upstream portal has no attachment (both the purchase-department and bill-section branches).
 - UPDATE: the work order detail page now has ONE download button ("Download Work Order") which serves the ORIGINAL copy (`/po-file`, upstream or admin-uploaded) and only falls back to the generated PDF when no copy exists. The separate "Original PO File" button was removed.
+- The Live / Off-Air toggle now also exists in Admin Command Center -> Work Orders tab ("Vendor Visibility" column, testid admin-order-live-toggle-<po>), in addition to the Work Orders page row toggle and the bulk control.
