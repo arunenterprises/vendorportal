@@ -34,25 +34,20 @@ function WorkOrderDetailInner() {
       subtitle={wo ? wo.title : ""}
       action={
         wo && (
-          <div className="flex flex-wrap gap-2">
-            {wo.has_po_file && (
-              <Button
-                variant="outline"
-                data-testid="work-order-po-file-button"
-                onClick={() => downloadFile(`/api/work-orders/${wo.id}/po-file`, wo.po_file_name || `${wo.po_number}.pdf`)}
-                className="gap-2"
-              >
-                <Download size={15} /> Original PO File
-              </Button>
-            )}
-            <Button
-              data-testid="work-order-detail-download-button"
-              onClick={() => downloadFile(`/api/work-orders/${wo.id}/pdf`, `${wo.po_number}.pdf`)}
-              className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white gap-2 active:scale-[0.98] [transition:background-color_.18s_ease,transform_.1s_ease]"
-            >
-              <Download size={15} /> {t("download_po")}
-            </Button>
-          </div>
+          <Button
+            data-testid="work-order-detail-download-button"
+            onClick={() =>
+              downloadFile(
+                // the vendor gets the ORIGINAL work order copy (upstream / admin uploaded);
+                // only when none exists do we fall back to the generated PDF
+                wo.has_po_file ? `/api/work-orders/${wo.id}/po-file` : `/api/work-orders/${wo.id}/pdf`,
+                wo.has_po_file ? wo.po_file_name || `${wo.po_number}.pdf` : `${wo.po_number}.pdf`,
+              )
+            }
+            className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white gap-2 active:scale-[0.98] [transition:background-color_.18s_ease,transform_.1s_ease]"
+          >
+            <Download size={15} /> {t("download_po")}
+          </Button>
         )
       }
     >

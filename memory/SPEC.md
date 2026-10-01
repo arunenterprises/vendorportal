@@ -199,3 +199,4 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - `POST /api/work-orders/{id}/po-file` (ADMIN ONLY; 403 vendor, 404 unknown id, 400 for empty or >500 KB) stores base64 in the work order (`po_file_*`, `has_po_file`, `po_file_uploaded_by/at`).
 - UI: Admin Command Center -> Work Orders tab -> "Upload Original Work Order" card: vendor Select -> work order Select -> file input (pdf/image, client-side 500 KB guard) -> Upload. Shows the currently attached copy name.
 - Sync preserves an admin-uploaded copy when the upstream portal has no attachment (both the purchase-department and bill-section branches).
+- UPDATE: the work order detail page now has ONE download button ("Download Work Order") which serves the ORIGINAL copy (`/po-file`, upstream or admin-uploaded) and only falls back to the generated PDF when no copy exists. The separate "Original PO File" button was removed.
