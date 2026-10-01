@@ -5,6 +5,7 @@ import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiGet, apiPost } from "@/lib/api";
 
@@ -19,6 +20,8 @@ export default function WorkOrderCopyUpload() {
   const fileRef = useRef(null);
   const [vendorId, setVendorId] = useState("");
   const [woId, setWoId] = useState("");
+  const [manual, setManual] = useState(false);
+  const [woNo, setWoNo] = useState("");
   const [file, setFile] = useState(null);
 
   const orders = useQuery({ queryKey: ["work-orders"], queryFn: () => apiGet("/work-orders"), retry: false });
@@ -38,23 +41,29 @@ export default function WorkOrderCopyUpload() {
 
   const upload = useMutation({
     mutationFn: async () => {
+      const target = manual
+        ? vendorOrders.find((o) => o.po_number.trim().toLowerCase() === woNo.trim().toLowerCase())
+        : vendorOrders.find((o) => o.id === woId);
+      if (!target) {
+        throw new Error("No work order with this number for the selected vendor");
+      }
       const data = await new Promise((resolve, reject) => {
         const r = new FileReader();
         r.onload = () => resolve(String(r.result).split(",", 2)[1]);
         r.onerror = reject;
         r.readAsDataURL(file);
       });
-      return apiPost(`/work-orders/${woId}/po-file`, {
+      return apiPost(`/work-orders/${target.id}/po-file`, {
         name: file.name,
         content_type: file.type || "application/pdf",
         data_base64: data,
       });
     },
-    onSuccess: () => {
+    onSuccess: (wo) => {
       qc.invalidateQueries({ queryKey: ["work-orders"] });
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
-      toast.success("Work order copy uploaded");
+      toast.success(`Work order copy uploaded for ${wo.po_number}`);
     },
     onError: (e) => toast.error(e.message || "Upload failed"),
   });
@@ -103,21 +112,42 @@ export default function WorkOrderCopyUpload() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Work Order</Label>
-          <Select value={woId} onValueChange={setWoId} disabled={!vendorId}>
-            <SelectTrigger data-testid="wo-upload-order-select" className="bg-white">
-              <SelectValue placeholder="Select work order">
-                {selected?.po_number ?? "Select work order"}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {vendorOrders.map((o) => (
-                <SelectItem key={o.id} value={o.id}>
-                  {`${o.po_number}${o.has_po_file ? " · copy attached" : ""}`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center justify-between gap-2">
+            <Label>Work Order</Label>
+            <button
+              type="button"
+              onClick={() => { setManual(!manual); setWoNo(""); setWoId(""); }}
+              data-testid="wo-upload-manual-toggle"
+              className="text-[11px] text-[#1D4ED8] hover:underline"
+            >
+              {manual ? "Pick from list" : "Enter manually"}
+            </button>
+          </div>
+          {manual ? (
+            <Input
+              value={woNo}
+              onChange={(e) => setWoNo(e.target.value)}
+              placeholder="Type work order no."
+              data-testid="wo-upload-manual-input"
+              disabled={!vendorId}
+              className="bg-white"
+            />
+          ) : (
+            <Select value={woId} onValueChange={setWoId} disabled={!vendorId}>
+              <SelectTrigger data-testid="wo-upload-order-select" className="bg-white">
+                <SelectValue placeholder="Select work order">
+                  {selected?.po_number ?? "Select work order"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {vendorOrders.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {`${o.po_number}${o.has_po_file ? " · copy attached" : ""}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -137,7 +167,7 @@ export default function WorkOrderCopyUpload() {
 
         <Button
           onClick={() => upload.mutate()}
-          disabled={!woId || !file || upload.isPending}
+          disabled={(manual ? !woNo.trim() : !woId) || !file || upload.isPending}
           data-testid="wo-upload-button"
           className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white gap-2 active:scale-[0.98]
             [transition:background-color_.18s_ease,transform_.1s_ease]"
@@ -146,9 +176,11 @@ export default function WorkOrderCopyUpload() {
         </Button>
       </div>
 
-      {selected ? (
+      {selected || (manual && woNo.trim()) ? (
         <p className="text-xs text-slate-500 mt-3" data-testid="wo-upload-current-file">
-          Current copy: {selected.po_file_name || "not uploaded"}
+          {manual
+            ? `Will upload to work order: ${woNo.trim()}`
+            : `Current copy: ${selected.po_file_name || "not uploaded"}`}
         </p>
       ) : null}
     </Card>
