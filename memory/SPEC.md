@@ -182,3 +182,9 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - Linked by vendorCode + woNo -> local id `arun-wo-<vendorCode>-<woNo slug>`, `origin: "purchase_department"`.
 - Mapped fields: woNo -> po_number, total -> value, woDate -> issued_date, expiryDate -> due_date/expiry_date, items (description/qty/unit/rate), approvedByName, approvalDate, preparedBy, clientName, projectSite, boqRefNo, paymentTerms, deliveryTerms, warrantyClause, penaltyClause, retentionPct, gstSlab, attachmentData -> WO copy.
 - UI: Work Orders list shows an "Approved WO" tag under the PO number; detail page shows Vendor Code, approval block (status/approved by/date/client/site/BOQ ref) and a "Work Order Terms" card. Sync result + Sync Log carry `purchase_work_orders`.
+- UPDATE: the purchase-department sync now takes EVERY work order (not only approved ones). `approved` flag = approvalDate set or step >= 4; the list tag reads "Approved WO" (green) or "WO in process" (amber), status_label = Approved / Pending approval.
+
+## Admin live / unlive control for work orders
+- `PATCH /api/work-orders/{id}/visibility` {live: bool} — ADMIN ONLY (403 for vendors, 404 for unknown id). Sets `live`, `live_updated_by/at`.
+- Vendor list query filters `live: {$ne: false}` and the detail endpoint returns 404 for an off-air work order; the admin always sees everything with a Live / Unlive toggle button in the Actions column.
+- Sync preserves the admin's `live` flag.

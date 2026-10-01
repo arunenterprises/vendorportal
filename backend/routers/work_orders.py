@@ -13,14 +13,18 @@ from uuid import uuid4
 from lib.auth import admin_user, current_user
 from lib.db import db
 from lib.pdf import work_order_pdf
-from models.schemas import WorkOrder, WorkOrderStatusUpdate
+from models.schemas import WorkOrder, WorkOrderStatusUpdate, WorkOrderVisibility
 
 router = APIRouter(prefix="/work-orders", tags=["work-orders"])
 
 
 @router.get("", response_model=list[WorkOrder])
 async def list_work_orders(user=Depends(current_user)):
-    q = {} if user.get("role") == "admin" else {"vendor_id": user.get("vendor_id")}
+    if user.get("role") == "admin":
+        q = {}
+    else:
+        # a work order the admin has taken off-air is hidden from the vendor
+        q = {"vendor_id": user.get("vendor_id"), "live": {"$ne": False}}
     docs = await db.work_orders.find(q, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return [WorkOrder(**d) for d in docs]
 
@@ -30,9 +34,30 @@ async def get_work_order(wo_id: str, user=Depends(current_user)):
     doc = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Work order not found")
-    if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
-        raise HTTPException(status_code=403, detail="Not allowed")
+    if user.get("role") != "admin":
+        if doc["vendor_id"] != user.get("vendor_id"):
+            raise HTTPException(status_code=403, detail="Not allowed")
+        if doc.get("live") is False:
+            raise HTTPException(status_code=404, detail="Work order not found")
     return WorkOrder(**doc)
+
+
+@router.patch("/{wo_id}/visibility", response_model=WorkOrder)
+async def update_visibility(wo_id: str, payload: WorkOrderVisibility, user=Depends(admin_user)):
+    """Admin-only: put a work order live for the vendor, or take it off-air."""
+    doc = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    await db.work_orders.update_one(
+        {"id": wo_id},
+        {"$set": {
+            "live": payload.live,
+            "live_updated_at": datetime.now(timezone.utc),
+            "live_updated_by": user.get("name") or user.get("email"),
+        }},
+    )
+    fresh = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
+    return WorkOrder(**fresh)
 
 
 @router.patch("/{wo_id}/status", response_model=WorkOrder)

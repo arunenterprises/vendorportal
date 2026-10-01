@@ -324,6 +324,7 @@ def map_purchase_wo(src: dict, vendor: dict) -> dict:
     ]
     expiry = str(src.get("expiryDate") or "")
     expired = bool(expiry and expiry < today_iso("Asia/Kolkata"))
+    approved = bool(str(src.get("approvalDate") or "").strip()) or int(_num(src.get("step"))) >= 4
     first = items[0]["description"] if items else (src.get("scopeOfWork") or "")
     title = f"{first} (+{len(items) - 1} more)" if len(items) > 1 else (first or wo_no)
 
@@ -337,6 +338,9 @@ def map_purchase_wo(src: dict, vendor: dict) -> dict:
         "scope": src.get("scopeOfWork") or src.get("termsAndConditions") or "",
         "value": _num(src.get("total")),
         "status": "completed" if expired else "active",
+        "wo_auto_status": "Approved Work Order" if approved else "Work order in process",
+        "status_label": "Approved" if approved else "Pending approval",
+        "approved": approved,
         "issued_date": str(src.get("woDate") or ""),
         "due_date": expiry,
         "expiry_date": expiry,
@@ -350,8 +354,6 @@ def map_purchase_wo(src: dict, vendor: dict) -> dict:
         "created_at": datetime.now(timezone.utc),
         "source": "arun_portal",
         "origin": "purchase_department",
-        "wo_auto_status": "Approved Work Order",
-        "status_label": "Approved",
         "approved_by": src.get("approvedByName") or "",
         "approval_date": str(src.get("approvalDate") or ""),
         "prepared_by": src.get("preparedBy") or "",
@@ -393,14 +395,12 @@ async def fetch_remote() -> tuple[list[dict], list[dict], list[dict]]:
 
     vendors = [v for v in v_res.json() if str(v.get("vendorCode") or "").strip()]
     bills = [b for b in b_res.json() if str(b.get("permanentBillNo") or b.get("billNo") or "").strip()]
-    # purchase department work orders — approved ones only
+    # purchase department work orders — every work order, approved or still in process
     purchase_wos = []
     if w_res.status_code == 200:
         purchase_wos = [
             w for w in w_res.json()
-            if str(w.get("woNo") or "").strip()
-            and str(w.get("vendorCode") or "").strip()
-            and (str(w.get("approvalDate") or "").strip() or int(_num(w.get("step"))) >= 4)
+            if str(w.get("woNo") or "").strip() and str(w.get("vendorCode") or "").strip()
         ]
     return vendors, bills, purchase_wos
 
@@ -462,11 +462,13 @@ async def sync_from_arun() -> dict:
         wo = map_purchase_wo(src, vendor)
         seen_wo_ids.add(wo["id"])
         existing = await db.work_orders.find_one(
-            {"id": wo["id"]}, {"_id": 0, "status": 1, "status_overridden": 1}
+            {"id": wo["id"]}, {"_id": 0, "status": 1, "status_overridden": 1, "live": 1}
         )
         if existing and existing.get("status_overridden"):
             wo["status"] = existing["status"]
             wo["status_overridden"] = True
+        if existing and existing.get("live") is not None:
+            wo["live"] = existing["live"]
         await db.work_orders.update_one({"id": wo["id"]}, {"$set": wo}, upsert=True)
         purchase_count += 1
 
@@ -485,8 +487,10 @@ async def sync_from_arun() -> dict:
         # an admin's manual status override wins over the upstream-derived status
         existing = await db.work_orders.find_one(
             {"id": wo["id"]},
-            {"_id": 0, "status": 1, "status_overridden": 1, "po_file_base64": 1, "po_file_name": 1, "po_file_type": 1},
+            {"_id": 0, "status": 1, "status_overridden": 1, "po_file_base64": 1, "po_file_name": 1, "po_file_type": 1, "live": 1},
         )
+        if existing and existing.get("live") is not None:
+            wo["live"] = existing["live"]
         if existing and existing.get("status_overridden"):
             wo["status"] = existing["status"]
             wo["status_overridden"] = True

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Download, Search } from "lucide-react";
+import { Download, Eye, EyeOff, Search } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 import AppLayout from "@/components/AppLayout";
 import RequireAuth from "@/components/RequireAuth";
@@ -31,6 +31,15 @@ function WorkOrdersInner() {
       toast.success("Work order status updated");
     },
     onError: (e) => toast.error(e.message || "Could not update status"),
+  });
+
+  const setLive = useMutation({
+    mutationFn: ({ id, live }) => apiPatch(`/work-orders/${id}/visibility`, { live }),
+    onSuccess: (wo) => {
+      qc.invalidateQueries({ queryKey: ["work-orders"] });
+      toast.success(wo.live ? "Work order is live for the vendor" : "Work order taken off-air");
+    },
+    onError: (e) => toast.error(e.message || "Could not update visibility"),
   });
 
   const { data, isLoading, isError } = useQuery({
@@ -152,10 +161,12 @@ function WorkOrdersInner() {
                       </Link>
                       {o.origin === "purchase_department" ? (
                         <span
-                          className="block mt-1 text-[10px] uppercase tracking-wide text-emerald-700 font-semibold"
+                          className={`block mt-1 text-[10px] uppercase tracking-wide font-semibold ${
+                            o.approved ? "text-emerald-700" : "text-amber-700"
+                          }`}
                           data-testid={`work-order-origin-${o.po_number}`}
                         >
-                          Approved WO
+                          {o.approved ? "Approved WO" : "WO in process"}
                         </span>
                       ) : null}
                     </td>
@@ -211,6 +222,22 @@ function WorkOrdersInner() {
                       >
                         <Download size={14} /> Work Order
                       </Button>
+                      {isAdmin ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          data-testid={`work-order-live-toggle-${o.po_number}`}
+                          onClick={() => setLive.mutate({ id: o.id, live: o.live === false })}
+                          className={`mt-1.5 gap-1.5 whitespace-nowrap ${
+                            o.live === false
+                              ? "text-slate-600 border-slate-200"
+                              : "text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                          }`}
+                        >
+                          {o.live === false ? <EyeOff size={14} /> : <Eye size={14} />}
+                          {o.live === false ? "Unlive" : "Live"}
+                        </Button>
+                      ) : null}
                     </td>
                   </tr>
                 );

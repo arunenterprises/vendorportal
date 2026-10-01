@@ -97,6 +97,12 @@ class WorkOrderStatusUpdate(BaseModel):
     status: str
 
 
+class WorkOrderVisibility(BaseModel):
+    """Admin-only: show (live) or hide (off-air) a work order for the vendor."""
+
+    live: bool
+
+
 class PasswordReset(BaseModel):
     password: str
 
@@ -165,6 +171,9 @@ class WorkOrder(BaseModel):
     stages_done: int = 0
     stages_total: int = 0
     expired: bool = False
+    approved: bool = False
+    live: bool = True
+    live_updated_by: str = ""
     status_overridden: bool = False
     status_updated_by: str = ""
     origin: str = ""
