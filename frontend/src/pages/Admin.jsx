@@ -21,6 +21,7 @@ import {
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
 import { formatINR, useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/useAuth";
+import WorkOrderCopyUpload from "@/components/WorkOrderCopyUpload";
 
 const EMPTY_USER = { email: "", name: "", role: "vendor", vendor_code: "", password: "" };
 const ROLE_LABELS = { vendor: "Vendor", admin: "Administrator" };
@@ -462,7 +463,7 @@ function AdminInner() {
           </Card>
         </TabsContent>
 
-        {/* ---------- read-only mirrors of the workflow portal ---------- */}
+        {/* ---------- read-only mirrors of the workflow portal (plus WO copy upload) ---------- */}
         <TabsContent value="vendors">
           <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-200">
@@ -503,6 +504,7 @@ function AdminInner() {
         </TabsContent>
 
         <TabsContent value="orders">
+          <WorkOrderCopyUpload />
           <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-200">
               <h2 className="text-base font-semibold text-slate-900">{t("nav_work_orders")}</h2>

@@ -13,9 +13,17 @@ from uuid import uuid4
 from lib.auth import admin_user, current_user
 from lib.db import db
 from lib.pdf import work_order_pdf
-from models.schemas import BulkVisibility, WorkOrder, WorkOrderStatusUpdate, WorkOrderVisibility
+from models.schemas import (
+    BulkVisibility,
+    WorkOrder,
+    WorkOrderFileUpload,
+    WorkOrderStatusUpdate,
+    WorkOrderVisibility,
+)
 
 router = APIRouter(prefix="/work-orders", tags=["work-orders"])
+
+MAX_WO_FILE_BYTES = 500 * 1024
 
 
 async def _decorate(docs: list[dict]) -> list[dict]:
@@ -133,6 +141,36 @@ async def update_status(wo_id: str, payload: WorkOrderStatusUpdate, user=Depends
         })
     fresh = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
     return WorkOrder(**fresh)
+
+
+@router.post("/{wo_id}/po-file", response_model=WorkOrder)
+async def upload_po_file(wo_id: str, payload: WorkOrderFileUpload, user=Depends(admin_user)):
+    """Admin-only: upload the original work order copy (max 500 KB)."""
+    doc = await db.work_orders.find_one({"id": wo_id}, {"_id": 0, "id": 1})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    raw = payload.data_base64.split(",", 1)[-1]
+    try:
+        blob = base64.b64decode(raw, validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="File could not be read")
+    if len(blob) > MAX_WO_FILE_BYTES:
+        raise HTTPException(status_code=400, detail="File larger than 500 KB")
+    if not blob:
+        raise HTTPException(status_code=400, detail="File is empty")
+    await db.work_orders.update_one(
+        {"id": wo_id},
+        {"$set": {
+            "po_file_base64": base64.b64encode(blob).decode(),
+            "po_file_name": payload.name.strip() or f"{wo_id}.pdf",
+            "po_file_type": payload.content_type or "application/pdf",
+            "has_po_file": True,
+            "po_file_uploaded_by": user.get("name") or user.get("email"),
+            "po_file_uploaded_at": datetime.now(timezone.utc),
+        }},
+    )
+    fresh = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
+    return WorkOrder(**(await _decorate([fresh]))[0])
 
 
 @router.get("/{wo_id}/po-file")

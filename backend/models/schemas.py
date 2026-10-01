@@ -103,6 +103,14 @@ class WorkOrderVisibility(BaseModel):
     live: bool
 
 
+class WorkOrderFileUpload(BaseModel):
+    """Admin-only upload of the original work order copy (max 500 KB)."""
+
+    name: str
+    content_type: str = "application/pdf"
+    data_base64: str
+
+
 class BulkVisibility(BaseModel):
     """Admin-only: put every work order of one vendor live / off-air at once."""
 
@@ -185,6 +193,7 @@ class WorkOrder(BaseModel):
     bills_count: int = 0
     balance_value: float = 0
     possible_duplicate: bool = False
+    po_file_uploaded_by: str = ""
     status_overridden: bool = False
     status_updated_by: str = ""
     origin: str = ""

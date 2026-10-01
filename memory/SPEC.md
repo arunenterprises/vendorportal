@@ -194,3 +194,8 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - UI: Work Orders list has a "Billed / Balance" column (balance green when fully billed, amber otherwise); the detail page has Billed So Far / Bills / Balance Value. Admin rows show a red "POSSIBLE DUPLICATE" tag — the fix for a double-entered work order is to take one off-air with the Unlive toggle (nothing is deleted locally; the upstream portal stays the source of truth).
 - Bulk live control: `PATCH /api/work-orders/visibility/bulk` {vendor_id, live} (admin only, 403 for vendors) + vendor picker with "All Live" / "All Off-Air" buttons in the Work Orders summary bar.
 - The "Approved WO / WO in process" tag is auto from the upstream purchase department and is NOT editable here; admins can only change status and live/off-air.
+
+## Admin upload of the original work order copy
+- `POST /api/work-orders/{id}/po-file` (ADMIN ONLY; 403 vendor, 404 unknown id, 400 for empty or >500 KB) stores base64 in the work order (`po_file_*`, `has_po_file`, `po_file_uploaded_by/at`).
+- UI: Admin Command Center -> Work Orders tab -> "Upload Original Work Order" card: vendor Select -> work order Select -> file input (pdf/image, client-side 500 KB guard) -> Upload. Shows the currently attached copy name.
+- Sync preserves an admin-uploaded copy when the upstream portal has no attachment (both the purchase-department and bill-section branches).
