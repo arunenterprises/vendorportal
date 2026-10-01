@@ -188,3 +188,9 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - `PATCH /api/work-orders/{id}/visibility` {live: bool} — ADMIN ONLY (403 for vendors, 404 for unknown id). Sets `live`, `live_updated_by/at`.
 - Vendor list query filters `live: {$ne: false}` and the detail endpoint returns 404 for an off-air work order; the admin always sees everything with a Live / Unlive toggle button in the Actions column.
 - Sync preserves the admin's `live` flag.
+
+## WO vs Bill match, duplicate hint, bulk live control
+- `_decorate()` in routers/work_orders.py adds to every work order: `billed_amount`, `bills_count`, `balance_value` (value - billed, from bills whose work_order_id matches) and `possible_duplicate` (same vendor_id + same order value appears more than once).
+- UI: Work Orders list has a "Billed / Balance" column (balance green when fully billed, amber otherwise); the detail page has Billed So Far / Bills / Balance Value. Admin rows show a red "POSSIBLE DUPLICATE" tag — the fix for a double-entered work order is to take one off-air with the Unlive toggle (nothing is deleted locally; the upstream portal stays the source of truth).
+- Bulk live control: `PATCH /api/work-orders/visibility/bulk` {vendor_id, live} (admin only, 403 for vendors) + vendor picker with "All Live" / "All Off-Air" buttons in the Work Orders summary bar.
+- The "Approved WO / WO in process" tag is auto from the upstream purchase department and is NOT editable here; admins can only change status and live/off-air.

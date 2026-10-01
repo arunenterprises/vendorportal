@@ -13,9 +13,36 @@ from uuid import uuid4
 from lib.auth import admin_user, current_user
 from lib.db import db
 from lib.pdf import work_order_pdf
-from models.schemas import WorkOrder, WorkOrderStatusUpdate, WorkOrderVisibility
+from models.schemas import BulkVisibility, WorkOrder, WorkOrderStatusUpdate, WorkOrderVisibility
 
 router = APIRouter(prefix="/work-orders", tags=["work-orders"])
+
+
+async def _decorate(docs: list[dict]) -> list[dict]:
+    """Attach bill match (billed / balance) and duplicate-work-order hints."""
+    bills = await db.bills.find({}, {"_id": 0, "work_order_id": 1, "total_amount": 1, "invoice_no": 1}).to_list(2000)
+    billed: dict[str, dict] = {}
+    for b in bills:
+        agg = billed.setdefault(b.get("work_order_id") or "", {"amount": 0.0, "count": 0})
+        agg["amount"] += float(b.get("total_amount") or 0)
+        agg["count"] += 1
+
+    # same vendor + same order value = most likely the same work order entered twice
+    groups: dict[tuple, int] = {}
+    for d in docs:
+        groups[(d.get("vendor_id"), round(float(d.get("value") or 0), 2))] = (
+            groups.get((d.get("vendor_id"), round(float(d.get("value") or 0), 2)), 0) + 1
+        )
+
+    out = []
+    for d in docs:
+        agg = billed.get(d["id"], {"amount": 0.0, "count": 0})
+        d["billed_amount"] = round(agg["amount"], 2)
+        d["bills_count"] = agg["count"]
+        d["balance_value"] = round(float(d.get("value") or 0) - agg["amount"], 2)
+        d["possible_duplicate"] = groups.get((d.get("vendor_id"), round(float(d.get("value") or 0), 2)), 0) > 1
+        out.append(d)
+    return out
 
 
 @router.get("", response_model=list[WorkOrder])
@@ -26,7 +53,7 @@ async def list_work_orders(user=Depends(current_user)):
         # a work order the admin has taken off-air is hidden from the vendor
         q = {"vendor_id": user.get("vendor_id"), "live": {"$ne": False}}
     docs = await db.work_orders.find(q, {"_id": 0}).sort("created_at", -1).to_list(1000)
-    return [WorkOrder(**d) for d in docs]
+    return [WorkOrder(**d) for d in await _decorate(docs)]
 
 
 @router.get("/{wo_id}", response_model=WorkOrder)
@@ -39,7 +66,21 @@ async def get_work_order(wo_id: str, user=Depends(current_user)):
             raise HTTPException(status_code=403, detail="Not allowed")
         if doc.get("live") is False:
             raise HTTPException(status_code=404, detail="Work order not found")
-    return WorkOrder(**doc)
+    return WorkOrder(**(await _decorate([doc]))[0])
+
+
+@router.patch("/visibility/bulk")
+async def bulk_visibility(payload: BulkVisibility, user=Depends(admin_user)):
+    """Admin-only: live / off-air every work order of one vendor in one click."""
+    res = await db.work_orders.update_many(
+        {"vendor_id": payload.vendor_id},
+        {"$set": {
+            "live": payload.live,
+            "live_updated_at": datetime.now(timezone.utc),
+            "live_updated_by": user.get("name") or user.get("email"),
+        }},
+    )
+    return {"ok": True, "updated": res.modified_count, "live": payload.live}
 
 
 @router.patch("/{wo_id}/visibility", response_model=WorkOrder)

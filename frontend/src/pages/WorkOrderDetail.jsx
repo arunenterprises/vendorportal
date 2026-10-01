@@ -100,6 +100,11 @@ function WorkOrderDetailInner() {
                 <Field label="UOM" value={wo.uom} />
                 <Field label="WO Copy" value={wo.po_file_name || "Not uploaded"} />
               </div>
+              <div className="mt-5 pt-5 border-t border-slate-100 grid grid-cols-3 gap-5" data-testid="work-order-bill-match">
+                <Field label="Billed So Far" value={formatINR(wo.billed_amount || 0)} />
+                <Field label="Bills" value={String(wo.bills_count || 0)} />
+                <Field label="Balance Value" value={formatINR(wo.balance_value || 0)} />
+              </div>
               <div className="mt-5 pt-5 border-t border-slate-100 flex items-center gap-4">
                 <StatusBadge status={wo.status} testId="work-order-detail-status" />
                 <span className="text-sm text-slate-500">{wo.vendor_name}</span>

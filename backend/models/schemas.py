@@ -103,6 +103,13 @@ class WorkOrderVisibility(BaseModel):
     live: bool
 
 
+class BulkVisibility(BaseModel):
+    """Admin-only: put every work order of one vendor live / off-air at once."""
+
+    vendor_id: str
+    live: bool
+
+
 class PasswordReset(BaseModel):
     password: str
 
@@ -174,6 +181,10 @@ class WorkOrder(BaseModel):
     approved: bool = False
     live: bool = True
     live_updated_by: str = ""
+    billed_amount: float = 0
+    bills_count: int = 0
+    balance_value: float = 0
+    possible_duplicate: bool = False
     status_overridden: bool = False
     status_updated_by: str = ""
     origin: str = ""

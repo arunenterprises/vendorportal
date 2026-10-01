@@ -9,6 +9,7 @@ import RequireAuth from "@/components/RequireAuth";
 import StatusBadge from "@/components/StatusBadge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { apiGet, apiPatch } from "@/lib/api";
 import { downloadFile } from "@/lib/download";
@@ -23,6 +24,7 @@ function WorkOrdersInner() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
+  const [bulkVendor, setBulkVendor] = useState("");
 
   const setStatus = useMutation({
     mutationFn: ({ id, status }) => apiPatch(`/work-orders/${id}/status`, { status }),
@@ -42,6 +44,15 @@ function WorkOrdersInner() {
     onError: (e) => toast.error(e.message || "Could not update visibility"),
   });
 
+  const bulkLive = useMutation({
+    mutationFn: ({ vendorId, live }) => apiPatch("/work-orders/visibility/bulk", { vendor_id: vendorId, live }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["work-orders"] });
+      toast.success(`${res.updated} work order(s) ${res.live ? "are now live" : "taken off-air"}`);
+    },
+    onError: (e) => toast.error(e.message || "Could not update visibility"),
+  });
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["work-orders"],
     queryFn: () => apiGet("/work-orders"),
@@ -56,8 +67,17 @@ function WorkOrdersInner() {
     return [...seen.values()];
   }, [data, isError]);
 
-  const counts = useMemo(() => {
-    const out = {};
+  const vendorOptions = useMemo(() => {
+    const m = new Map();
+    for (const o of all) {
+      const cur = m.get(o.vendor_id) || { id: o.vendor_id, name: o.vendor_name || o.vendor_code, count: 0 };
+      cur.count += 1;
+      m.set(o.vendor_id, cur);
+    }
+    return [...m.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [all]);
+
+  const counts = useMemo(() => {    const out = {};
     for (const f of FILTERS) {
       const list = f === "all" ? all : all.filter((o) => o.status === f);
       out[f] = { count: list.length, value: list.reduce((s, o) => s + (o.value || 0), 0) };
@@ -120,6 +140,49 @@ function WorkOrdersInner() {
           <span className="font-semibold text-slate-900">
             {formatINR(rows.reduce((s, o) => s + (o.value || 0), 0))}
           </span>
+          {isAdmin ? (
+            <span className="ml-4 inline-flex flex-wrap items-center gap-2">
+              <Select value={bulkVendor} onValueChange={setBulkVendor}>
+                <SelectTrigger
+                  data-testid="bulk-live-vendor-select"
+                  className="h-7 w-[260px] text-xs bg-white"
+                >
+                  <SelectValue placeholder="Select vendor for bulk action…">
+                    {vendorOptions.find((v) => v.id === bulkVendor)
+                      ? `${vendorOptions.find((v) => v.id === bulkVendor).name} (${vendorOptions.find((v) => v.id === bulkVendor).count})`
+                      : "Select vendor for bulk action…"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {vendorOptions.map((v) => (
+                    <SelectItem key={v.id} value={v.id} className="text-xs">
+                      {`${v.name} (${v.count})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!bulkVendor || bulkLive.isPending}
+                data-testid="bulk-live-on-button"
+                onClick={() => bulkLive.mutate({ vendorId: bulkVendor, live: true })}
+                className="h-7 gap-1.5 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+              >
+                <Eye size={13} /> All Live
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!bulkVendor || bulkLive.isPending}
+                data-testid="bulk-live-off-button"
+                onClick={() => bulkLive.mutate({ vendorId: bulkVendor, live: false })}
+                className="h-7 gap-1.5 text-xs text-slate-600 border-slate-200"
+              >
+                <EyeOff size={13} /> All Off-Air
+              </Button>
+            </span>
+          ) : null}
         </div>
 
         <div className="overflow-x-auto">
@@ -131,12 +194,15 @@ function WorkOrdersInner() {
                     {t(h)}
                   </th>
                 ))}
+                <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
+                  Billed / Balance
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-14 text-center text-slate-400" data-testid="work-orders-empty">
+                  <td colSpan={8} className="px-5 py-14 text-center text-slate-400" data-testid="work-orders-empty">
                     {isLoading ? t("loading") : isError ? t("offline_note") : t("no_data")}
                   </td>
                 </tr>
@@ -165,8 +231,18 @@ function WorkOrdersInner() {
                             o.approved ? "text-emerald-700" : "text-amber-700"
                           }`}
                           data-testid={`work-order-origin-${o.po_number}`}
+                          title="Auto from the workflow portal's purchase department — approve the work order there to change this. Here you can only change status or Live/Off-air."
                         >
                           {o.approved ? "Approved WO" : "WO in process"}
+                        </span>
+                      ) : null}
+                      {isAdmin && o.possible_duplicate ? (
+                        <span
+                          className="block mt-1 text-[10px] uppercase tracking-wide text-red-700 font-semibold"
+                          data-testid={`work-order-duplicate-${o.po_number}`}
+                          title="Same vendor and same order value — check if this work order was entered twice, then take one off-air"
+                        >
+                          Possible duplicate
                         </span>
                       ) : null}
                     </td>
@@ -238,6 +314,15 @@ function WorkOrdersInner() {
                           {o.live === false ? "Unlive" : "Live"}
                         </Button>
                       ) : null}
+                    </td>
+                    <td className="px-5 py-3.5 min-w-[150px]" data-testid={`work-order-bill-match-${o.po_number}`}>
+                      <p className="text-slate-900">{formatINR(o.billed_amount || 0)}</p>
+                      <p className="text-[11px] text-slate-500">
+                        {o.bills_count || 0} bill{(o.bills_count || 0) === 1 ? "" : "s"} · Balance{" "}
+                        <span className={(o.balance_value || 0) <= 0 ? "text-emerald-700 font-semibold" : "text-amber-700 font-semibold"}>
+                          {formatINR(o.balance_value || 0)}
+                        </span>
+                      </p>
                     </td>
                   </tr>
                 );
