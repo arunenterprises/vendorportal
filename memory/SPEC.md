@@ -215,3 +215,8 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - An admin's manual payment entry (`payment_updated_by`) is never overwritten by the register.
 - Sync result + Admin Sync Log carry a `payments` column (vouchers applied).
 - When a voucher releases payment, `status_label` is rewritten to "Paid · <mode> · <pvNo>" so the badge no longer shows the stale upstream "Added to Due List (Unpaid)" wording.
+
+## Payment Advice PDF
+- `GET /api/bills/{id}/payment-advice` -> branded A4 PDF (lib/pdf.py `payment_advice_pdf`): PV No., UTR/Ref, payment date & mode, voucher status, invoice no/date, PO number, Paid To block (company, vendor code, bank, IFSC, account no, GSTIN), payment summary with taxable/GST/TDS/amount paid and the approver name.
+- Access: own vendor or admin (403 cross-vendor); 400 when no UTR/PV exists yet; 404 unknown bill.
+- UI: bill detail dialog shows a blue "Payment Advice" button next to "Download Invoice PDF", only when the bill has a UTR or PV number.

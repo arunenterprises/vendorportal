@@ -312,6 +312,18 @@ function BillsInner() {
                 >
                   <Download size={15} /> Download Invoice PDF
                 </Button>
+                {open.utr || open.pv_no ? (
+                  <Button
+                    data-testid="bill-payment-advice-button"
+                    onClick={() =>
+                      downloadFile(`/api/bills/${open.id}/payment-advice`, `Payment Advice ${open.invoice_no}.pdf`)
+                    }
+                    className="gap-2 bg-[#1D4ED8] hover:bg-[#1E40AF] text-white active:scale-[0.98]
+                      [transition:background-color_.18s_ease,transform_.1s_ease]"
+                  >
+                    <Download size={15} /> Payment Advice
+                  </Button>
+                ) : null}
               </div>
             </div>
           )}

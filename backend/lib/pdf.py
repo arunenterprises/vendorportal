@@ -185,6 +185,50 @@ def invoice_pdf(bill: dict, vendor: dict) -> bytes:
     return _build(el)
 
 
+def payment_advice_pdf(bill: dict, vendor: dict) -> bytes:
+    """Payment advice for a released payment — PV number, UTR, mode and amount."""
+    st = _styles()
+    el = _header(st, "PAYMENT ADVICE")
+    el += [
+        _kv_table([
+            ["PV No.", bill.get("pv_no") or "-", "Payment Date", bill.get("payment_date") or bill.get("paid_date") or "-"],
+            ["UTR / Ref No.", bill.get("utr") or "-", "Payment Mode", bill.get("payment_mode") or "-"],
+            ["Invoice No.", bill.get("invoice_no", ""), "Invoice Date", bill.get("invoice_date", "")],
+            ["PO Number", bill.get("po_number", "") or "-", "Voucher Status",
+             bill.get("payment_status") or _pretty(bill.get("status"))],
+        ]),
+        Paragraph("Paid To", st["h"]),
+        _kv_table([
+            ["Company", vendor.get("company_name", ""), "Vendor Code", vendor.get("code", "")],
+            ["Bank", vendor.get("bank_name", "") or "-", "IFSC", vendor.get("ifsc", "") or "-"],
+            ["Account No.", vendor.get("account_no", "") or "-", "GSTIN", vendor.get("gstin", "") or "-"],
+        ]),
+        Paragraph("Payment Summary", st["h"]),
+        _data_table(
+            [["Particulars", "Reference", "Amount (INR)"],
+             ["Payment against invoice", bill.get("invoice_no", ""), _inr(bill.get("total_amount", 0))]],
+            [80 * mm, 50 * mm, 40 * mm],
+        ),
+        Spacer(1, 8),
+        _kv_table([
+            ["Taxable Value", _inr(bill.get("taxable_amount", 0)), "GST", _inr(bill.get("gst_amount", 0))],
+            ["TDS Deducted", _inr(bill.get("tds_amount", 0)), "Amount Paid", _inr(bill.get("total_amount", 0))],
+        ]),
+        Spacer(1, 14),
+        Paragraph(
+            f"Payment approved by: {bill.get('payment_approved_by') or '-'}", st["n"]
+        ),
+        Spacer(1, 16),
+        Paragraph(f"For {COMPANY_NAME}<br/><br/><br/>Authorised Signatory", st["n"]),
+        Spacer(1, 10),
+        Paragraph(
+            f"This payment advice is a computer generated document from the {COMPANY_NAME} Vendor Portal.",
+            st["sub"],
+        ),
+    ]
+    return _build(el)
+
+
 def work_order_pdf(wo: dict, vendor: dict) -> bytes:
     st = _styles()
     el = _header(st, "PURCHASE / WORK ORDER")

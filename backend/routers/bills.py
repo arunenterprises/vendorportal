@@ -13,7 +13,7 @@ from uuid import uuid4
 from lib.auth import admin_user, current_user
 from lib.dates import today_iso
 from lib.db import db
-from lib.pdf import invoice_pdf
+from lib.pdf import invoice_pdf, payment_advice_pdf
 from models.schemas import Bill, BillPaymentUpdate
 
 router = APIRouter(prefix="/bills", tags=["bills"])
@@ -81,6 +81,23 @@ async def get_bill(bill_id: str, user=Depends(current_user)):
     if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
         raise HTTPException(status_code=403, detail="Not allowed")
     return Bill(**doc)
+
+
+@router.get("/{bill_id}/payment-advice")
+async def download_payment_advice(bill_id: str, user=Depends(current_user)):
+    """Payment advice PDF (PV number + UTR). Available once payment is released."""
+    doc = await db.bills.find_one({"id": bill_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Bill not found")
+    if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
+        raise HTTPException(status_code=403, detail="Not allowed")
+    if not (doc.get("utr") or doc.get("pv_no")):
+        raise HTTPException(status_code=400, detail="Payment not released yet for this invoice")
+    vendor = await db.vendors.find_one({"id": doc["vendor_id"]}, {"_id": 0}) or {}
+    return Response(
+        content=payment_advice_pdf(doc, vendor), media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="Payment Advice {doc["invoice_no"]}.pdf"'},
+    )
 
 
 @router.get("/{bill_id}/pdf")
