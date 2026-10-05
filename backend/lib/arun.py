@@ -514,7 +514,7 @@ async def sync_from_arun() -> dict:
         bill = map_bill(src, vendor)
         # never clobber a UTR / payment already recorded inside this portal
         local = await db.bills.find_one({"invoice_no": bill["invoice_no"]}, {"_id": 0})
-        if local and local.get("utr"):
+        if local and (local.get("utr") or local.get("payment_updated_by")):
             bill["utr"] = local["utr"]
             bill["status"] = local.get("status", bill["status"])
             bill["paid_date"] = local.get("paid_date", bill["paid_date"])

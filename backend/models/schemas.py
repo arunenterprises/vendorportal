@@ -103,6 +103,14 @@ class WorkOrderVisibility(BaseModel):
     live: bool
 
 
+class BillPaymentUpdate(BaseModel):
+    """Admin-only: maintain the payment status / UTR of a bill."""
+
+    status: str
+    utr: str = ""
+    paid_date: str = ""
+
+
 class WorkOrderFileUpload(BaseModel):
     """Admin-only upload of the original work order copy (max 500 KB)."""
 
@@ -229,6 +237,7 @@ class Bill(BaseModel):
     status: str = "pending"  # pending | under_review | paid | rejected
     status_label: str = ""   # verbatim upstream wording, when synced
     utr: str = ""
+    payment_updated_by: str = ""
     paid_date: str = ""
     remarks: str = ""
     created_at: datetime = Field(default_factory=_now)

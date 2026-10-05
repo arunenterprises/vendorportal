@@ -202,3 +202,9 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - UPDATE: the work order detail page now has ONE download button ("Download Work Order") which serves the ORIGINAL copy (`/po-file`, upstream or admin-uploaded) and only falls back to the generated PDF when no copy exists. The separate "Original PO File" button was removed.
 - The Live / Off-Air toggle now also exists in Admin Command Center -> Work Orders tab ("Vendor Visibility" column, testid admin-order-live-toggle-<po>), in addition to the Work Orders page row toggle and the bulk control.
 - The WO copy upload card also supports MANUAL work order entry: "Enter manually" toggle -> type the WO number; it is matched (case-insensitive) against the selected vendor's work orders and shows "No work order with this number for the selected vendor" when it does not exist.
+
+## Admin payment status / UTR maintenance
+- `PATCH /api/bills/{id}/payment` {status, utr, paid_date?} — ADMIN ONLY (403 vendor, 404 unknown bill, 400 for a status outside pending/under_review/paid/rejected). Sets status, utr, payment_updated_by/at and auto-fills paid_date (Asia/Kolkata today) when marking paid; writes `bill_changes` alerts for status and UTR so the vendor's dashboard shows them.
+- Bills list: admin rows carry a status dropdown + UTR input + Save button in the Status column; vendors just see the badge and the UTR text (read-only).
+- Sync keeps a locally maintained payment (preserved when `utr` or `payment_updated_by` is set).
+- Saving a bill payment also invalidates the `summary` and `work-orders` query keys, so the dashboard "Cleared Payments" / "Payment Pending" KPIs update immediately for admin and vendor (verified: 0.00 <-> 1.44 L both ways).

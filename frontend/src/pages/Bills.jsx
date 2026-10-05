@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Download, Search } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Download, Save, Search } from "lucide-react";
+import { useAuth } from "@/lib/useAuth";
 import AppLayout from "@/components/AppLayout";
 import RequireAuth from "@/components/RequireAuth";
 import StatusBadge from "@/components/StatusBadge";
@@ -11,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPatch } from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import { formatINR, useI18n } from "@/lib/i18n";
 
@@ -33,6 +35,23 @@ function BillsInner() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [open, setOpen] = useState(null);
+  const [draft, setDraft] = useState({});
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const qc = useQueryClient();
+
+  const savePayment = useMutation({
+    mutationFn: ({ id, status, utr }) => apiPatch(`/bills/${id}/payment`, { status, utr }),
+    onSuccess: (bill) => {
+      qc.invalidateQueries({ queryKey: ["bills"] });
+      qc.invalidateQueries({ queryKey: ["summary"] });
+      qc.invalidateQueries({ queryKey: ["work-orders"] });
+      qc.invalidateQueries({ queryKey: ["bill-changes"] });
+      setDraft((d) => { const n = { ...d }; delete n[bill.id]; return n; });
+      toast.success(`Payment details saved for ${bill.invoice_no}`);
+    },
+    onError: (e) => toast.error(e.message || "Could not save payment details"),
+  });
 
   const bills = useQuery({ queryKey: ["bills"], queryFn: () => apiGet("/bills"), retry: false });
 
@@ -123,7 +142,50 @@ function BillsInner() {
                   <td className="px-4 py-3.5 whitespace-nowrap font-semibold text-slate-900">
                     {formatINR(b.total_amount)}
                   </td>
-                  <td className="px-4 py-3.5"><StatusBadge status={b.status} label={b.status_label} /></td>
+                  <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                    <StatusBadge status={b.status} label={b.status_label} />
+                    {isAdmin ? (
+                      <div className="mt-2 flex flex-col gap-1.5 min-w-[190px]">
+                        <select
+                          value={draft[b.id]?.status ?? b.status}
+                          onChange={(e) => setDraft({ ...draft, [b.id]: { ...(draft[b.id] || { utr: b.utr || "" }), status: e.target.value } })}
+                          data-testid={`bill-status-select-${b.invoice_no}`}
+                          className="text-[11px] border border-slate-200 rounded-md px-1.5 py-1 bg-white text-slate-700
+                            focus:outline-none focus:ring-1 focus:ring-[#1D4ED8] [transition:border-color_.18s_ease]"
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="under_review">Under Review</option>
+                          <option value="paid">Paid</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                        <Input
+                          value={draft[b.id]?.utr ?? b.utr ?? ""}
+                          onChange={(e) => setDraft({ ...draft, [b.id]: { ...(draft[b.id] || { status: b.status }), utr: e.target.value } })}
+                          placeholder="UTR / reference no."
+                          data-testid={`bill-utr-input-${b.invoice_no}`}
+                          className="h-7 text-[11px]"
+                        />
+                        <Button
+                          size="sm"
+                          data-testid={`bill-payment-save-${b.invoice_no}`}
+                          disabled={savePayment.isPending}
+                          onClick={() =>
+                            savePayment.mutate({
+                              id: b.id,
+                              status: draft[b.id]?.status ?? b.status,
+                              utr: draft[b.id]?.utr ?? b.utr ?? "",
+                            })
+                          }
+                          className="h-7 gap-1.5 text-[11px] bg-[#1D4ED8] hover:bg-[#1E40AF] text-white
+                            active:scale-[0.98] [transition:background-color_.18s_ease,transform_.1s_ease]"
+                        >
+                          <Save size={12} /> Save
+                        </Button>
+                      </div>
+                    ) : b.utr ? (
+                      <p className="text-[11px] text-slate-500 mt-1 font-mono">{b.utr}</p>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-3.5">
                     <Button
                       variant="outline"
