@@ -208,3 +208,10 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - Bills list: admin rows carry a status dropdown + UTR input + Save button in the Status column; vendors just see the badge and the UTR text (read-only).
 - Sync keeps a locally maintained payment (preserved when `utr` or `payment_updated_by` is set).
 - Saving a bill payment also invalidates the `summary` and `work-orders` query keys, so the dashboard "Cleared Payments" / "Payment Pending" KPIs update immediately for admin and vendor (verified: 0.00 <-> 1.44 L both ways).
+
+## Payments Register sync (Reports & Vouchers)
+- Upstream `GET /api/payments` (Reports & Vouchers -> Payments Register) is synced after bills. Each voucher is matched to a bill by `billRefNo` == our `invoice_no`.
+- Updates on the bill: `pv_no`, `payment_mode`, `payment_date`, `payment_status` (voucher status), `payment_approved_by`, `utr`, and `status` -> "paid" when a UTR exists (paid_date = voucher date), else "under_review". Status/UTR diffs are written to `bill_changes` so the vendor sees them in Recent Updates, and the dashboard Cleared/Pending KPIs follow.
+- An admin's manual payment entry (`payment_updated_by`) is never overwritten by the register.
+- Sync result + Admin Sync Log carry a `payments` column (vouchers applied).
+- When a voucher releases payment, `status_label` is rewritten to "Paid · <mode> · <pvNo>" so the badge no longer shows the stale upstream "Added to Due List (Unpaid)" wording.

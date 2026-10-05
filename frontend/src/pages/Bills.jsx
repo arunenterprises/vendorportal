@@ -258,6 +258,11 @@ function BillsInner() {
                   <Field label="Purchase Incharge" value={open.purchase_incharge} />
                   <Field label="Site Incharge" value={open.site_incharge} />
                   <Field label="UTR" value={open.utr} mono />
+                <Field label="PV No." value={open.pv_no} mono />
+                <Field label="Payment Mode" value={open.payment_mode} />
+                <Field label="Payment Date" value={open.payment_date} />
+                <Field label="Voucher Status" value={open.payment_status} />
+                <Field label="Payment Approved By" value={open.payment_approved_by} />
                   <Field label="Paid Date" value={open.paid_date} />
                 </div>
                 {open.todo_notes && (

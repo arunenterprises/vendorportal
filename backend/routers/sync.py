@@ -21,6 +21,7 @@ async def run_arun_sync(user=Depends(admin_user)):
         "work_orders": result["work_orders"],
         "purchase_work_orders": result.get("purchase_work_orders", 0),
         "bills": result["bills"],
+        "payments": result.get("payments", 0),
         "changes": result.get("changes", 0),
         "removed_work_orders": result.get("removed_work_orders", 0),
         "removed_bills": result.get("removed_bills", 0),

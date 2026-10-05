@@ -431,14 +431,14 @@ function AdminInner() {
               <table className="w-full text-sm" data-testid="admin-sync-log-table">
                 <thead className="bg-slate-50 text-slate-500">
                   <tr className="text-left">
-                    {["Run At", "Vendors", "Work Orders", "Approved WOs", "Bills", "Changes", "New Logins", "Skipped Bills"].map((h) => (
+                    {["Run At", "Vendors", "Work Orders", "Approved WOs", "Bills", "Payments", "Changes", "New Logins", "Skipped Bills"].map((h) => (
                       <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {syncRows.length === 0 && (
-                    <tr><td colSpan={8} className="px-5 py-14 text-center text-slate-400" data-testid="admin-sync-log-empty">
+                    <tr><td colSpan={9} className="px-5 py-14 text-center text-slate-400" data-testid="admin-sync-log-empty">
                       {syncRuns.isLoading ? t("loading") : t("no_data")}
                     </td></tr>
                   )}
@@ -448,13 +448,14 @@ function AdminInner() {
                         {r.synced_at ? new Date(r.synced_at).toLocaleString("en-IN") : "—"}
                       </td>
                       {r.error ? (
-                        <td colSpan={7} className="px-4 py-3.5 text-red-700">Failed: {r.error}</td>
+                        <td colSpan={8} className="px-4 py-3.5 text-red-700">Failed: {r.error}</td>
                       ) : (
                         <>
                           <td className="px-4 py-3.5 text-slate-700">{r.vendors ?? 0}</td>
                           <td className="px-4 py-3.5 text-slate-700">{r.work_orders ?? 0}</td>
                           <td className="px-4 py-3.5 text-slate-700">{r.purchase_work_orders ?? 0}</td>
                           <td className="px-4 py-3.5 text-slate-700">{r.bills ?? 0}</td>
+                          <td className="px-4 py-3.5 text-slate-700">{r.payments ?? 0}</td>
                           <td className="px-4 py-3.5 text-slate-900 font-medium">{r.changes ?? 0}</td>
                           <td className="px-4 py-3.5 text-slate-600 text-xs">
                             {(r.new_logins || []).map((l) => l.vendor_code).join(", ") || "—"}

@@ -376,7 +376,7 @@ def map_purchase_wo(src: dict, vendor: dict) -> dict:
     }
 
 
-async def fetch_remote() -> tuple[list[dict], list[dict], list[dict]]:
+async def fetch_remote() -> tuple[list[dict], list[dict], list[dict], list[dict]]:
     base, identifier, password = _cfg()
     if not base or not identifier or not password:
         raise ArunPortalError("Arun portal credentials are not configured in backend/.env")
@@ -387,6 +387,7 @@ async def fetch_remote() -> tuple[list[dict], list[dict], list[dict]]:
         v_res = await client.get(f"{base}/api/vendors", headers=headers)
         b_res = await client.get(f"{base}/api/bills", headers=headers)
         w_res = await client.get(f"{base}/api/work_orders", headers=headers)
+        p_res = await client.get(f"{base}/api/payments", headers=headers)
 
     if v_res.status_code != 200:
         raise ArunPortalError(f"Could not read vendors from Arun portal ({v_res.status_code})")
@@ -402,7 +403,11 @@ async def fetch_remote() -> tuple[list[dict], list[dict], list[dict]]:
             w for w in w_res.json()
             if str(w.get("woNo") or "").strip() and str(w.get("vendorCode") or "").strip()
         ]
-    return vendors, bills, purchase_wos
+    # payments register (Reports & Vouchers) — payment vouchers per bill
+    payments = []
+    if p_res.status_code == 200:
+        payments = [p for p in p_res.json() if str(p.get("billRefNo") or "").strip()]
+    return vendors, bills, purchase_wos, payments
 
 
 async def sync_from_arun() -> dict:
@@ -411,7 +416,7 @@ async def sync_from_arun() -> dict:
     A vendor's portal login is created on first sync with their vendorCode as the
     password, so each firm can sign in and see only its own records.
     """
-    remote_vendors, remote_bills, remote_purchase_wos = await fetch_remote()
+    remote_vendors, remote_bills, remote_purchase_wos, remote_payments = await fetch_remote()
 
     vendors_by_code: dict[str, dict] = {}
     for src in remote_vendors:
@@ -545,8 +550,51 @@ async def sync_from_arun() -> dict:
         seen_invoice_nos.add(bill["invoice_no"])
         bills = len(seen_invoice_nos)
 
-    # the workflow portal is the single source of truth: drop anything it no longer has
-    # (this also clears rows left behind by an older id scheme, which showed up as duplicates)
+    # ---- payments register (Reports & Vouchers): current payment status per bill ----
+    payments_applied = 0
+    for pv in remote_payments:
+        ref = str(pv.get("billRefNo") or "").strip()
+        local = await db.bills.find_one({"invoice_no": ref}, {"_id": 0})
+        if not local:
+            continue
+        # an admin's manual payment entry in this portal wins
+        if local.get("payment_updated_by"):
+            continue
+        utr = str(pv.get("utrNo") or "").strip()
+        pv_status = str(pv.get("status") or "").strip()
+        pay_date = str(pv.get("date") or pv.get("approvalDate") or "")
+        new_status = "paid" if utr else ("under_review" if pv_status else local.get("status", "pending"))
+        update = {
+            "pv_no": str(pv.get("pvNo") or ""),
+            "payment_mode": str(pv.get("mode") or ""),
+            "payment_date": pay_date,
+            "payment_status": pv_status,
+            "payment_approved_by": str(pv.get("approvedByName") or ""),
+            "utr": utr,
+            "status": new_status,
+        }
+        if utr:
+            update["paid_date"] = pay_date
+            # the badge must not keep the stale upstream wording once payment is released
+            update["status_label"] = f"Paid · {pv.get('mode') or 'Payment'} · {pv.get('pvNo') or ''}".strip(" ·")
+        for field, label in (("status", "Payment status"), ("utr", "UTR")):
+            if str(local.get(field) or "") != str(update[field] or ""):
+                changes += 1
+                await db.bill_changes.insert_one({
+                    "id": str(uuid4()),
+                    "vendor_id": local["vendor_id"],
+                    "bill_id": local["id"],
+                    "invoice_no": local["invoice_no"],
+                    "field": field,
+                    "label": label,
+                    "from_value": str(local.get(field) or ""),
+                    "to_value": str(update[field] or ""),
+                    "changed_at": datetime.now(timezone.utc),
+                })
+        await db.bills.update_one({"invoice_no": ref}, {"$set": update})
+        payments_applied += 1
+
+    # the workflow portal is the single source of truth: drop anything it no longer has    # (this also clears rows left behind by an older id scheme, which showed up as duplicates)
     removed_wo = await db.work_orders.delete_many(
         {"source": "arun_portal", "id": {"$nin": list(seen_wo_ids)}}
     )
@@ -559,6 +607,7 @@ async def sync_from_arun() -> dict:
         "work_orders": work_orders,
         "purchase_work_orders": purchase_count,
         "bills": bills,
+        "payments": payments_applied,
         "changes": changes,
         "removed_work_orders": removed_wo.deleted_count,
         "removed_bills": removed_bills.deleted_count,

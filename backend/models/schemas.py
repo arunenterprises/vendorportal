@@ -236,6 +236,11 @@ class Bill(BaseModel):
     total_amount: float = 0
     status: str = "pending"  # pending | under_review | paid | rejected
     status_label: str = ""   # verbatim upstream wording, when synced
+    pv_no: str = ""
+    payment_mode: str = ""
+    payment_date: str = ""
+    payment_status: str = ""
+    payment_approved_by: str = ""
     utr: str = ""
     payment_updated_by: str = ""
     paid_date: str = ""
