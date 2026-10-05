@@ -10,7 +10,7 @@ from models.schemas import DocumentCreate, DocumentOut
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
-MAX_BYTES = 100 * 1024  # 100 KB cap per upload
+MAX_BYTES = 350 * 1024  # 350 KB cap per upload
 
 # Vendors may upload only these document types.
 ALLOWED_DOC_TYPES = [
@@ -59,7 +59,7 @@ async def upload_document(payload: DocumentCreate, user=Depends(current_user)):
     if not blob:
         raise HTTPException(status_code=400, detail="Empty file")
     if len(blob) > MAX_BYTES:
-        raise HTTPException(status_code=400, detail="File larger than 100 KB")
+        raise HTTPException(status_code=400, detail="File larger than 350 KB")
 
     doc = {
         "id": str(uuid.uuid4()),

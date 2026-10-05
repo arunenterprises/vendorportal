@@ -122,7 +122,7 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 
 ## Compliance & Documents (updated)
 - Allowed doc types (vendor upload only): Sale Invoice, Aadhaar Card, PAN Card, Cancelled Cheque, GST Certificate, Udyam Certificate, Photo.
-- Max upload size: 100 KB (client-side check in Documents.jsx + server check in routers/documents.py).
+- Max upload size: 350 KB (client-side check in Documents.jsx + server check in routers/documents.py).
 - Download: ADMIN ONLY (`GET /api/documents/{id}/download` returns 403 for vendors). Vendors see only a delete action.
 
 ## Password Update

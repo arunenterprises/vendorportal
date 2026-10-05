@@ -26,7 +26,7 @@ const DOC_TYPES = [
   "Photo",
 ];
 
-const MAX_BYTES = 100 * 1024; // 100 KB
+const MAX_BYTES = 350 * 1024; // 350 KB
 
 function readAsBase64(file) {
   return new Promise((resolve, reject) => {
@@ -77,7 +77,7 @@ function DocumentsInner() {
   function onPickFile(e) {
     const f = e.target.files?.[0] ?? null;
     if (f && f.size > MAX_BYTES) {
-      toast.error(`File is ${prettySize(f.size)} — maximum allowed size is 100 KB`);
+      toast.error(`File is ${prettySize(f.size)} — maximum allowed size is 350 KB`);
       setFile(null);
       if (fileRef.current) fileRef.current.value = "";
       return;
@@ -92,7 +92,7 @@ function DocumentsInner() {
       return;
     }
     if (file.size > MAX_BYTES) {
-      toast.error("Maximum allowed file size is 100 KB");
+      toast.error("Maximum allowed file size is 350 KB");
       return;
     }
     const dataUrl = await readAsBase64(file);
@@ -114,7 +114,7 @@ function DocumentsInner() {
       subtitle={
         isAdmin
           ? "All documents submitted by vendors. Only the admin can download them."
-          : "Upload your Sale Invoice and statutory documents. Maximum file size 100 KB. Downloads are available to the admin only."
+          : "Upload your Sale Invoice and statutory documents. Maximum file size 350 KB. Downloads are available to the admin only."
       }
     >
       <div className={isVendor ? "grid grid-cols-1 xl:grid-cols-[340px_1fr] gap-6" : "grid grid-cols-1 gap-6"}>
@@ -159,7 +159,7 @@ function DocumentsInner() {
                   className="cursor-pointer"
                 />
                 <p className="text-xs text-slate-400" data-testid="document-size-hint">
-                  Maximum 100 KB · PDF, JPG or PNG
+                  Maximum 350 KB · PDF, JPG or PNG
                 </p>
               </div>
               <Button
