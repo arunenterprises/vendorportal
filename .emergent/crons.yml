@@ -1,7 +1,7 @@
 crons:
   - name: nightly-arun-sync
-    description: "Syncs vendors, work orders and bills from the Arun workflow portal every night at 1am IST"
-    cron: "0 1 * * *"
+    description: "Syncs vendors, work orders and bills from the Arun workflow portal every 15 minutes"
+    cron: "*/15 * * * *"
     timezone: "Asia/Kolkata"
     # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
     endpoint: "{{BASE_URL}}/api/cron/sync-arun"

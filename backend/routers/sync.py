@@ -1,10 +1,20 @@
+import asyncio
+import logging
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from lib.arun import ArunPortalError, sync_from_arun
 from lib.auth import admin_user, current_user
 from lib.db import db
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sync", tags=["sync"])
+
+# Auto sync: the workflow portal is the source of truth, so the portal re-pulls it
+# whenever someone opens a page — but at most once every AUTO_SYNC_MIN_GAP.
+AUTO_SYNC_MIN_GAP = timedelta(minutes=3)
+_auto_lock = asyncio.Lock()
 
 
 @router.post("/arun")
@@ -29,6 +39,37 @@ async def run_arun_sync(user=Depends(admin_user)):
         "skipped_bills": result["skipped_bills"],
         "synced_at": result["synced_at"],
     }
+
+
+@router.post("/auto")
+async def auto_sync(user=Depends(current_user)):
+    """Refresh upstream data on page load (any signed-in user), throttled + single-flight.
+
+    Returns {"synced": bool} so the caller knows whether to refetch its queries.
+    """
+    if _auto_lock.locked():
+        return {"synced": False, "reason": "in_progress"}
+    async with _auto_lock:
+        last = await db.sync_runs.find_one({"error": {"$exists": False}}, {"_id": 0, "synced_at": 1}, sort=[("synced_at", -1)])
+        last_at = last.get("synced_at") if last else None
+        if last_at is not None:
+            if last_at.tzinfo is None:
+                last_at = last_at.replace(tzinfo=timezone.utc)
+            if datetime.now(timezone.utc) - last_at < AUTO_SYNC_MIN_GAP:
+                return {"synced": False, "reason": "fresh", "last_sync": last_at}
+        try:
+            result = await sync_from_arun()
+        except Exception as exc:  # a stale page must never break on an upstream hiccup
+            logger.error("auto sync failed: %s", exc)
+            return {"synced": False, "reason": "error", "detail": str(exc)}
+        return {
+            "synced": True,
+            "vendors": result["vendors"],
+            "work_orders": result["work_orders"],
+            "bills": result["bills"],
+            "changes": result.get("changes", 0),
+            "synced_at": result["synced_at"],
+        }
 
 
 @router.get("/runs")

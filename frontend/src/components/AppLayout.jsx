@@ -9,6 +9,7 @@ import { apiGet } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/useAuth";
 import { endSession } from "@/lib/session";
+import { useAutoSync } from "@/lib/useAutoSync";
 
 function navItems(role) {
   const base = [
@@ -32,6 +33,8 @@ export default function AppLayout({ children, title, subtitle, action }) {
   const [open, setOpen] = useState(false);
 
   const isVendor = user?.role === "vendor";
+  // keep this portal in step with the workflow portal on every page open
+  useAutoSync(Boolean(user));
   const { data: vendor } = useQuery({
     queryKey: ["vendor", "me"],
     queryFn: () => apiGet("/vendors/me"),

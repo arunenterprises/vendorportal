@@ -216,6 +216,21 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - Sync result + Admin Sync Log carry a `payments` column (vouchers applied).
 - When a voucher releases payment, `status_label` is rewritten to "Paid · <mode> · <pvNo>" so the badge no longer shows the stale upstream "Added to Due List (Unpaid)" wording.
 
+## Auto refresh from the workflow portal (data freshness fix)
+- Problem: upstream data only landed here on the 1 AM cron or an admin's manual
+  "Sync from Workflow Portal" click, so vendors/bills added during the day
+  (e.g. AE0015/AE0016) were missing from the portal.
+- `POST /api/sync/auto` (any signed-in user): single-flight (`asyncio.Lock`) +
+  throttled to once per 3 minutes (`AUTO_SYNC_MIN_GAP`, checks the newest
+  error-free `sync_runs` doc). Returns `{synced: bool, reason?}`; upstream
+  failures are logged and returned as `synced:false`, never a 5xx.
+- `frontend/src/lib/useAutoSync.js` -> called from `components/AppLayout.jsx`,
+  so EVERY page open re-pulls upstream and invalidates summary / vendors /
+  vendor / bills / work-orders / bill-changes / sync-status / sync-runs when
+  something changed.
+- `.emergent/crons.yml` `nightly-arun-sync` now runs **every 15 minutes**
+  (`*/15 * * * *`) instead of once nightly.
+
 ## Payment Advice PDF
 - `GET /api/bills/{id}/payment-advice` -> branded A4 PDF (lib/pdf.py `payment_advice_pdf`): PV No., UTR/Ref, payment date & mode, voucher status, invoice no/date, PO number, Paid To block (company, vendor code, bank, IFSC, account no, GSTIN), payment summary with taxable/GST/TDS/amount paid and the approver name.
 - Access: own vendor or admin (403 cross-vendor); 400 when no UTR/PV exists yet; 404 unknown bill.
