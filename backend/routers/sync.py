@@ -37,6 +37,7 @@ async def run_arun_sync(user=Depends(admin_user)):
         "removed_bills": result.get("removed_bills", 0),
         "new_logins": result["new_logins"],
         "skipped_bills": result["skipped_bills"],
+        "duplicate_vendors": result.get("duplicate_vendors", []),
         "synced_at": result["synced_at"],
     }
 

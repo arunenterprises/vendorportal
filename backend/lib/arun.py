@@ -61,6 +61,40 @@ def _vendor_address(src: dict) -> str:
     return ", ".join(str(p).strip() for p in parts if str(p or "").strip())
 
 
+def _created_key(src: dict) -> float:
+    """Sortable creation stamp for an upstream record (`id` looks like v_<epoch-ms>)."""
+    raw = str(src.get("id") or "").split("_")[-1]
+    try:
+        return float(raw)
+    except ValueError:
+        return float("inf")
+
+
+def dedupe_vendors(remote: list[dict]) -> tuple[list[dict], list[dict]]:
+    """One record per vendorCode: the ORIGINAL (oldest) record owns the code.
+
+    The workflow portal can hold more than one record on the same vendorCode (a
+    draft entered under an existing code before being given its own). Upserting
+    on the code made the newest draft overwrite the real vendor's details, so
+    the later duplicates are ignored here and reported to the admin instead.
+    """
+    by_code: dict[str, dict] = {}
+    for src in sorted(remote, key=_created_key):
+        code = str(src.get("vendorCode") or "").strip()
+        by_code.setdefault(code, src)
+    kept_ids = {id(v) for v in by_code.values()}
+    ignored = [
+        {
+            "vendor_code": str(v.get("vendorCode") or "").strip(),
+            "firm_name": v.get("firmName") or v.get("accountHolder") or "",
+            "external_id": v.get("id"),
+        }
+        for v in remote
+        if id(v) not in kept_ids
+    ]
+    return list(by_code.values()), ignored
+
+
 def map_vendor(src: dict) -> dict:
     """External vendor -> our `vendors` document. Keyed on vendorCode."""
     code = str(src.get("vendorCode") or "").strip()
@@ -418,6 +452,8 @@ async def sync_from_arun() -> dict:
     """
     remote_vendors, remote_bills, remote_purchase_wos, remote_payments = await fetch_remote()
 
+    remote_vendors, duplicate_vendors = dedupe_vendors(remote_vendors)
+
     vendors_by_code: dict[str, dict] = {}
     for src in remote_vendors:
         mapped = map_vendor(src)
@@ -613,6 +649,7 @@ async def sync_from_arun() -> dict:
         "removed_bills": removed_bills.deleted_count,
         "new_logins": logins,
         "skipped_bills": skipped,
+        "duplicate_vendors": duplicate_vendors,
         "synced_at": datetime.now(timezone.utc),
     }
     await db.sync_runs.insert_one(dict(result))

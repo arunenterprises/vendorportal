@@ -231,6 +231,18 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - `.emergent/crons.yml` `nightly-arun-sync` now runs **every 15 minutes**
   (`*/15 * * * *`) instead of once nightly.
 
+## Duplicate vendorCode protection (wrong vendor data fix)
+- The workflow portal can hold MORE THAN ONE record on the same `vendorCode`
+  (a new vendor entered under an existing code before getting its own code).
+  Our upsert is keyed on `code`, so the newest draft overwrote the real vendor —
+  AE0001JV2627 (Annapurna Steels) showed PRAVEEN SINGH's details.
+- `lib/arun.py#dedupe_vendors()` now keeps ONE record per code: the **oldest**
+  upstream record (sorted by the epoch-ms suffix of its `id`) owns the code; the
+  later duplicates are ignored and returned as `duplicate_vendors`
+  [{vendor_code, firm_name, external_id}] in the sync result + `sync_runs`.
+- Admin -> Sync Log has a red **Duplicate Codes** column listing them, so the
+  duplicate can be cleaned up in the upstream portal.
+
 ## Payment Advice PDF
 - `GET /api/bills/{id}/payment-advice` -> branded A4 PDF (lib/pdf.py `payment_advice_pdf`): PV No., UTR/Ref, payment date & mode, voucher status, invoice no/date, PO number, Paid To block (company, vendor code, bank, IFSC, account no, GSTIN), payment summary with taxable/GST/TDS/amount paid and the approver name.
 - Access: own vendor or admin (403 cross-vendor); 400 when no UTR/PV exists yet; 404 unknown bill.

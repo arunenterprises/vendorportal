@@ -424,14 +424,14 @@ function AdminInner() {
             <div className="px-5 py-4 border-b border-slate-200">
               <h2 className="text-base font-semibold text-slate-900">Sync Log</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Last 10 sync runs from the Arun workflow portal. A nightly sync runs automatically at 1:00 AM IST.
+                Last 10 sync runs from the Arun workflow portal. An automatic sync runs every 15 minutes and on every page open.
               </p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm" data-testid="admin-sync-log-table">
                 <thead className="bg-slate-50 text-slate-500">
                   <tr className="text-left">
-                    {["Run At", "Vendors", "Work Orders", "Approved WOs", "Bills", "Payments", "Changes", "New Logins", "Skipped Bills"].map((h) => (
+                    {["Run At", "Vendors", "Work Orders", "Approved WOs", "Bills", "Payments", "Changes", "New Logins", "Skipped Bills", "Duplicate Codes"].map((h) => (
                       <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -448,7 +448,7 @@ function AdminInner() {
                         {r.synced_at ? new Date(r.synced_at).toLocaleString("en-IN") : "—"}
                       </td>
                       {r.error ? (
-                        <td colSpan={8} className="px-4 py-3.5 text-red-700">Failed: {r.error}</td>
+                        <td colSpan={9} className="px-4 py-3.5 text-red-700">Failed: {r.error}</td>
                       ) : (
                         <>
                           <td className="px-4 py-3.5 text-slate-700">{r.vendors ?? 0}</td>
@@ -462,6 +462,11 @@ function AdminInner() {
                           </td>
                           <td className="px-4 py-3.5 text-amber-700 text-xs">
                             {(r.skipped_bills || []).join(", ") || "—"}
+                          </td>
+                          <td className="px-4 py-3.5 text-red-700 text-xs" data-testid={`admin-sync-run-duplicates-${i}`}>
+                            {(r.duplicate_vendors || [])
+                              .map((d) => `${d.vendor_code} (${d.firm_name})`)
+                              .join(", ") || "—"}
                           </td>
                         </>
                       )}
