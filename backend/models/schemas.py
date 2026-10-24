@@ -275,6 +275,8 @@ class Bill(BaseModel):
     bill_value: float = 0.0
     # gross bill amount (basic + GST)
     gross_amount: float = 0.0
+    # amount released by the Payments Register voucher
+    paid_amount: float = 0.0
     # Vendor Bill Process: "Other Deductions / Penalties" + previous advance text
     other_deductions: float = 0.0
     previous_advance_note: str = ""
@@ -332,11 +334,20 @@ class Summary(BaseModel):
     current_bill_no: str = ""
     current_bill_date: str = ""
     current_bill_status: str = ""
+    current_bill_submitted: str = ""
     approved_bill_amount: float = 0.0
     approved_bill_no: str = ""
     approved_bill_date: str = ""
     cleared_bill_date: str = ""
     cleared_bill_no: str = ""
+    cleared_bill_submitted: str = ""
+    # previous (second most recent) paid bill
+    last_bill_amount: float = 0.0
+    last_bill_no: str = ""
+    last_bill_paid_date: str = ""
+    last_bill_submitted: str = ""
     balance_bill_amount: float = 0.0
     balance_bill_date: str = ""
     balance_bill_no: str = ""
+    balance_bill_status: str = ""
+    balance_bill_submitted: str = ""

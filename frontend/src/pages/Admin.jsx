@@ -710,18 +710,18 @@ function AdminInner() {
               </Button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm table-fixed min-w-[1080px]" data-testid="admin-bills-table">
+              <table className="w-full text-[13px] table-fixed" data-testid="admin-bills-table">
                 <colgroup>
-                  <col className="w-[10%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[12%]" />
                   <col className="w-[11%]" />
                   <col className="w-[9%]" />
                   <col className="w-[9%]" />
                   <col className="w-[9%]" />
                   <col className="w-[9%]" />
-                  <col className="w-[9%]" />
                   <col className="w-[7%]" />
-                  <col className="w-[9%]" />
                   <col className="w-[10%]" />
+                  <col className="w-[11%]" />
                   <col className="w-[8%]" />
                 </colgroup>
                 <thead className="bg-slate-50 text-slate-500">
@@ -742,7 +742,7 @@ function AdminInner() {
                       <th
                         key={h.label}
                         title={h.title}
-                        className={`px-2.5 py-3 font-semibold text-[10px] uppercase tracking-wide whitespace-nowrap ${
+                        className={`px-2 py-2.5 font-semibold text-[10px] uppercase tracking-wide whitespace-nowrap ${
                           h.right ? "text-right" : ""
                         }`}
                       >
@@ -758,40 +758,40 @@ function AdminInner() {
                   {filteredBills.map((b) => {
                     const pv = registerRows.find((p) => p.bill_ref_no === b.invoice_no) || {};
                     return (
-                      <tr key={b.id} className="border-t border-slate-100 align-middle hover:bg-slate-50/70 [transition:background-color_.18s_ease]" data-testid={`admin-bill-row-${b.invoice_no}`}>
-                        <td className="px-2.5 py-3 font-mono text-[11px] font-semibold text-slate-900 truncate" title={b.invoice_no}>{b.invoice_no}</td>
-                        <td className="px-2.5 py-3 text-slate-700 truncate" title={b.vendor_name}>{b.vendor_name}</td>
-                        <td className="px-2.5 py-3 font-mono text-[11px] text-slate-500 truncate" title={b.bill_no}>{b.bill_no || "—"}</td>
-                        <td className="px-2.5 py-3 text-right whitespace-nowrap font-semibold text-slate-900" data-testid={`admin-bill-value-${b.invoice_no}`}>
+                      <tr key={b.id} className="border-t border-slate-100 align-top hover:bg-slate-50/70 [transition:background-color_.18s_ease]" data-testid={`admin-bill-row-${b.invoice_no}`}>
+                        <td className="px-2 py-2.5 font-mono text-[11px] font-semibold text-slate-900 break-all leading-snug" title={b.invoice_no}>{b.invoice_no}</td>
+                        <td className="px-2 py-2.5 text-slate-700 break-words leading-snug" title={b.vendor_name}>{b.vendor_name}</td>
+                        <td className="px-2 py-2.5 font-mono text-[11px] text-slate-500 break-all leading-snug" title={b.bill_no}>{b.bill_no || "—"}</td>
+                        <td className="px-2 py-2.5 text-right whitespace-nowrap font-semibold text-slate-900" data-testid={`admin-bill-value-${b.invoice_no}`}>
                           {/* gross bill amount from Vendor Bill Process: basic + GST */}
                           {formatINR(b.gross_amount || b.bill_value || b.total_amount)}
                         </td>
-                        <td className="px-2.5 py-3 text-right whitespace-nowrap" data-testid={`admin-bill-advance-${b.invoice_no}`}>
+                        <td className="px-2 py-2.5 text-right whitespace-nowrap" data-testid={`admin-bill-advance-${b.invoice_no}`}>
                           {/* Vendor Bill Process -> Other Deductions / Penalties */}
                           <span className={b.other_deductions ? "font-semibold text-amber-700" : "text-slate-400"}>
                             {b.other_deductions ? formatINR(b.other_deductions) : "—"}
                           </span>
                           {b.previous_advance_note && b.previous_advance_note !== "0" ? (
-                            <span className="block text-[10px] text-slate-400 truncate" title={b.previous_advance_note}>
+                            <span className="block text-[10px] text-slate-400 break-words" title={b.previous_advance_note}>
                               {b.previous_advance_note}
                             </span>
                           ) : null}
                         </td>
-                        <td className="px-2.5 py-3 text-right whitespace-nowrap" data-testid={`admin-bill-amount-${b.invoice_no}`}>
+                        <td className="px-2 py-2.5 text-right whitespace-nowrap" data-testid={`admin-bill-amount-${b.invoice_no}`}>
                           {/* Amount as shown in the ERP Payments Register voucher; falls back to the bill total until a voucher exists */}
                           <span className="font-semibold text-slate-900">
                             {formatINR(pv.amount != null ? pv.amount : b.total_amount)}
                           </span>
                         </td>
-                        <td className="px-2.5 py-3 font-mono text-[11px] text-[#1D4ED8] truncate" title={pv.pv_no || b.pv_no}>{pv.pv_no || b.pv_no || "—"}</td>
-                        <td className="px-2.5 py-3 text-slate-600 text-xs whitespace-nowrap">{pv.payment_date || b.payment_date || "—"}</td>
-                        <td className="px-2.5 py-3 font-mono text-[11px] text-slate-600 truncate" title={pv.utr_no || b.utr}>{pv.utr_no || b.utr || "—"}</td>
-                        <td className="px-2.5 py-3 overflow-hidden" data-testid={`admin-bill-status-${b.invoice_no}`}>
+                        <td className="px-2 py-2.5 font-mono text-[11px] text-[#1D4ED8] break-all leading-snug" title={pv.pv_no || b.pv_no}>{pv.pv_no || b.pv_no || "—"}</td>
+                        <td className="px-2 py-2.5 text-slate-600 text-[11px] whitespace-nowrap">{pv.payment_date || b.payment_date || "—"}</td>
+                        <td className="px-2 py-2.5 font-mono text-[11px] text-slate-600 break-all leading-snug" title={pv.utr_no || b.utr}>{pv.utr_no || b.utr || "—"}</td>
+                        <td className="px-2 py-2.5" data-testid={`admin-bill-status-${b.invoice_no}`}>
                           {/* Status exactly as the ERP Payments Register voucher shows it; bill status only until a voucher exists */}
                           {pv.status ? (
                             <span
                               title={pv.utr_no ? `Paid via ${pv.mode || "NEFT"} · ${pv.status}` : pv.status}
-                              className={`inline-flex max-w-full items-center truncate rounded-full px-2 py-1 text-[10px] font-semibold ${
+                              className={`inline-block max-w-full rounded-md px-2 py-1 text-[10px] font-semibold leading-snug ${
                                 /reject|cancel/i.test(pv.status)
                                   ? "bg-red-50 text-red-700"
                                   : /approve|paid|release/i.test(pv.status)
@@ -802,12 +802,21 @@ function AdminInner() {
                               {pv.utr_no ? `Paid via ${pv.mode || "NEFT"}` : pv.status}
                             </span>
                           ) : (
-                            <div className="max-w-full truncate" title={b.status_label || b.status}>
-                              <StatusBadge status={b.status} label={b.status_label} />
-                            </div>
+                            <span
+                              title={b.status_label || b.status}
+                              className={`inline-block max-w-full rounded-md px-2 py-1 text-[10px] font-semibold leading-snug ${
+                                b.status === "paid"
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : b.status === "rejected"
+                                    ? "bg-red-50 text-red-700"
+                                    : "bg-amber-50 text-amber-800"
+                              }`}
+                            >
+                              {b.status_label || b.status}
+                            </span>
                           )}
                         </td>
-                        <td className="px-2.5 py-3 text-slate-600 text-xs whitespace-nowrap">{b.due_date || "—"}</td>
+                        <td className="px-2 py-2.5 text-slate-600 text-[11px] whitespace-nowrap">{b.due_date || "—"}</td>
                       </tr>
                     );
                   })}

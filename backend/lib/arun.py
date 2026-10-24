@@ -643,6 +643,8 @@ async def sync_from_arun() -> dict:
             "payment_date": pay_date,
             "payment_status": pv_status,
             "payment_approved_by": str(pv.get("approvedByName") or ""),
+            # amount actually released by the Payments Register voucher
+            "paid_amount": _num(pv.get("amount")),
             "utr": utr,
             "status": new_status,
         }

@@ -12,51 +12,58 @@ import { useAuth } from "@/lib/useAuth";
 
 const KPIS_UNUSED_REMOVED = true;
 
-// Dashboard summary tiles in the order the business reads them:
-// total -> current bill -> approved bill -> cleared -> balance -> active work orders
+// Dashboard tiles in the order the business reads them:
+// 1 total -> 2 cleared -> 3 previous paid bill -> 4 current bill -> 5 balance -> work orders
+// Every bill tile carries its bill no and the date it was submitted upstream.
 function STAT_TILES(s) {
+  const billLine = (no, submitted) =>
+    no ? `${no}${submitted ? ` · Submitted ${submitted}` : ""}` : "—";
   return [
     {
       key: "total_billed",
       label: "Total Bill Amount",
       value: s ? formatINR(s.total_billed) : "—",
+      meta: s ? `${s.total_bills} bills on record` : "—",
       icon: IndianRupee,
       tone: "text-slate-900",
-    },
-    {
-      key: "current_bill",
-      label: "Current Bill Amount",
-      value: s ? formatINR(s.current_bill_amount) : "—",
-      meta: s?.current_bill_no ? `${s.current_bill_no}${s.current_bill_date ? ` · Filled ${s.current_bill_date}` : ""}` : "—",
-      extra: s?.current_bill_status || "",
-      icon: FileText,
-      tone: "text-slate-900",
-    },
-    {
-      key: "approved_bill",
-      label: "Approved Bill Amount",
-      value: s ? formatINR(s.approved_bill_amount) : "—",
-      meta: s?.approved_bill_no ? `${s.approved_bill_no}${s.approved_bill_date ? ` · Approved ${s.approved_bill_date}` : ""}` : "—",
-      icon: CheckCircle2,
-      tone: "text-blue-800",
     },
     {
       key: "cleared_payment",
       label: "Cleared Bill Amount",
       value: s ? formatINR(s.cleared_payment) : "—",
-      meta: s?.cleared_bill_date
-        ? `${s.cleared_bill_no ? `${s.cleared_bill_no} · ` : ""}Paid ${s.cleared_bill_date}`
-        : "—",
+      meta: s ? billLine(s.cleared_bill_no, s.cleared_bill_submitted) : "—",
+      extra: s?.cleared_bill_date ? `Paid ${s.cleared_bill_date}` : "",
+      extraTone: "text-emerald-700",
       icon: Banknote,
       tone: "text-emerald-700",
+    },
+    {
+      key: "last_bill",
+      label: "Previous Bill & Amount",
+      value: s ? formatINR(s.last_bill_amount) : "—",
+      meta: s ? billLine(s.last_bill_no, s.last_bill_submitted) : "—",
+      extra: s?.last_bill_paid_date ? `Paid ${s.last_bill_paid_date}` : "",
+      extraTone: "text-emerald-700",
+      icon: CheckCircle2,
+      tone: "text-slate-900",
+    },
+    {
+      key: "current_bill",
+      label: "Current Bill & Amount",
+      value: s ? formatINR(s.current_bill_amount) : "—",
+      meta: s ? billLine(s.current_bill_no, s.current_bill_submitted) : "—",
+      extra: s?.current_bill_status || "",
+      extraTone: "text-blue-800",
+      icon: FileText,
+      tone: "text-slate-900",
     },
     {
       key: "balance_bill",
       label: "Balance Bill Amount",
       value: s ? formatINR(s.balance_bill_amount) : "—",
-      meta: s?.balance_bill_date
-        ? `${s.balance_bill_no ? `${s.balance_bill_no} · ` : ""}Due ${s.balance_bill_date}`
-        : "—",
+      meta: s ? billLine(s.balance_bill_no, s.balance_bill_submitted) : "—",
+      extra: s?.balance_bill_status || (s?.balance_bill_date ? `Due ${s.balance_bill_date}` : ""),
+      extraTone: "text-amber-700",
       icon: Wallet,
       tone: "text-amber-700",
     },
@@ -64,7 +71,7 @@ function STAT_TILES(s) {
       key: "active_orders",
       label: "Active Work Orders",
       value: s ? String(s.active_orders) : "—",
-      meta: s ? `${s.total_bills} bills on record` : "—",
+      meta: s ? `${s.vendors_count} vendor${s.vendors_count === 1 ? "" : "s"}` : "—",
       icon: FileText,
       tone: "text-white",
       dark: true,
@@ -140,7 +147,7 @@ function DashboardInner() {
             )}
             {tile.extra ? (
               <p
-                className="mt-1 text-[11px] font-semibold text-blue-800 truncate"
+                className={`mt-1 text-[11px] font-semibold truncate ${tile.extraTone || "text-blue-800"}`}
                 title={tile.extra}
                 data-testid={`kpi-extra-${tile.key}`}
               >

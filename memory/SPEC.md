@@ -256,7 +256,10 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   Excel export carries Gross Bill Amount and Total Bill Value (basic + GST − TDS)
   alongside Taxable/GST/TDS. Admin table headers are short and tooltipped
   (Gross Amt · Adv / Ded · Paid Amt · GPV / PV No · Pay Date · UTR No · Status ·
-  Due Date) with `px-2.5` cells and an 1080px min-width so all 11 columns fit.
+  Due Date); the table is `w-full table-fixed` with NO min-width and compact
+  `px-2 py-2.5` cells, and every cell wraps (`break-all` on mono ids,
+  `break-words` on names) instead of clipping — so all 11 columns fit the card
+  exactly (no horizontal scroll) and every value is fully readable.
 - An **Advance / Deductions** column sits just before Amount and shows the
   Vendor Bill Process field "Other Deductions / Penalties"
   (`bills.other_deductions`, mapped from upstream `otherDeductions`), with the
@@ -290,11 +293,13 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   `approved_bill_*` (newest with an approvalDate — amount, bill no, approval date),
   `cleared_bill_no/date` (newest paid), `balance_bill_*` (pending total + bill no
   + due date) and `active_orders`.
-- Dashboard shows 6 tiles in business order: Total Bill Amount · Current Bill
-  Amount (bill no + filled date + live status) · Approved Bill Amount (bill no +
-  approved date) · Cleared Bill Amount (bill no + paid date) · Balance Bill
-  Amount (bill no + due date) · Active Work Orders. 3-up grid, each tile has
-  `kpi-value-*` / `kpi-meta-*` testids.
+- Dashboard shows 6 tiles in business order: Total Bill Amount (bills count) ·
+  Cleared Bill Amount (bill no + submitted date + paid date) · Previous Bill &
+  Amount (second most recent paid bill with its paid date) · Current Bill &
+  Amount (bill no + submitted date + live upstream status) · Balance Bill Amount
+  (bill no + submitted date + status/due) · Active Work Orders. Every bill tile
+  prints its bill no and upstream submitted date. 3-up grid, each tile has
+  `kpi-value-*` / `kpi-meta-*` / `kpi-extra-*` testids.
 
 ## Table layout pass (user: "layout set kijiye")
 - Bills, Work Orders, Documents and the Admin bills table all use a fixed layout

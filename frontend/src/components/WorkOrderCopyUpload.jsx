@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiGet, apiPost } from "@/lib/api";
@@ -20,6 +21,8 @@ export default function WorkOrderCopyUpload() {
   const fileRef = useRef(null);
   const [vendorId, setVendorId] = useState("");
   const [woId, setWoId] = useState("");
+  const [manual, setManual] = useState(false);
+  const [manualNo, setManualNo] = useState("");
   const [file, setFile] = useState(null);
 
   const orders = useQuery({ queryKey: ["work-orders"], queryFn: () => apiGet("/work-orders"), retry: false });
@@ -36,11 +39,21 @@ export default function WorkOrderCopyUpload() {
   }, [rows]);
 
   const vendorOrders = useMemo(() => rows.filter((o) => o.vendor_id === vendorId), [rows, vendorId]);
-  const selected = vendorOrders.find((o) => o.id === woId);
+  const typed = manualNo.trim().toLowerCase();
+  const selected = manual
+    ? rows.find((o) => String(o.po_number).trim().toLowerCase() === typed)
+    : vendorOrders.find((o) => o.id === woId);
+  const target = manual ? manualNo.trim() : woId;
 
   const upload = useMutation({
     mutationFn: async () => {
-      if (!selected) throw new Error("Select a work order first");
+      if (!selected) {
+        throw new Error(
+          manual
+            ? `No work order found with number ${manualNo.trim()}`
+            : "Select a work order first",
+        );
+      }
       const data = await new Promise((resolve, reject) => {
         const r = new FileReader();
         r.onload = () => resolve(String(r.result).split(",", 2)[1]);
@@ -105,6 +118,15 @@ export default function WorkOrderCopyUpload() {
 
         <div className="space-y-1.5">
           <Label>Work Order</Label>
+          {manual ? (
+            <Input
+              value={manualNo}
+              onChange={(e) => setManualNo(e.target.value)}
+              placeholder="Type work order no"
+              data-testid="wo-upload-manual-input"
+              className="bg-white"
+            />
+          ) : (
           <Select value={woId} onValueChange={setWoId} disabled={!vendorId}>
             <SelectTrigger data-testid="wo-upload-order-select" className="bg-white">
               <SelectValue placeholder="Select work order">
@@ -119,6 +141,17 @@ export default function WorkOrderCopyUpload() {
               ))}
             </SelectContent>
           </Select>
+          )}
+          <label className="flex items-center gap-1.5 text-[11px] text-slate-500 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={manual}
+              onChange={(e) => { setManual(e.target.checked); setWoId(""); setManualNo(""); }}
+              data-testid="wo-upload-manual-toggle"
+              className="h-3 w-3 accent-[#1D4ED8]"
+            />
+            Enter work order no manually
+          </label>
         </div>
 
         <div className="space-y-1.5">
@@ -129,7 +162,6 @@ export default function WorkOrderCopyUpload() {
             type="file"
             accept="application/pdf,image/*"
             onChange={pickFile}
-            disabled={!woId}
             data-testid="wo-upload-file-input"
             className="block w-full text-sm text-slate-600 border border-slate-200 rounded-md px-3 py-2
               disabled:opacity-60 disabled:cursor-not-allowed
@@ -140,7 +172,7 @@ export default function WorkOrderCopyUpload() {
 
         <Button
           onClick={() => upload.mutate()}
-          disabled={!woId || !file || upload.isPending}
+          disabled={!target || !file || upload.isPending}
           data-testid="wo-upload-button"
           className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white gap-2 active:scale-[0.98]
             [transition:background-color_.18s_ease,transform_.1s_ease]"
@@ -152,6 +184,10 @@ export default function WorkOrderCopyUpload() {
       {selected ? (
         <p className="text-xs text-slate-500 mt-3" data-testid="wo-upload-current-file">
           {`${selected.po_number} · current copy: ${selected.po_file_name || "not uploaded"}`}
+        </p>
+      ) : manual && manualNo.trim() ? (
+        <p className="text-xs text-amber-700 mt-3" data-testid="wo-upload-current-file">
+          {`No work order found with number ${manualNo.trim()} — check the number and try again`}
         </p>
       ) : null}
     </Card>
