@@ -286,6 +286,19 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - Documents: card header carries a document count and a role-aware subtitle;
   vendor view has no action buttons (admin-only download/delete).
 
+## Admin bill filters + Excel export
+- Admin Command Center → Bills & Invoices has a filter bar: **Status**
+  (all/pending/under_review/paid/rejected) + **Bill date from / to** (matched on
+  `filling_date`, falling back to `invoice_date`) + Reset. The card header shows
+  "X of Y bills · ₹total" for the current filter.
+- `GET /api/bills/export.xlsx?status=&date_from=&date_to=` — ADMIN ONLY (403 for
+  vendors, 401 unauthenticated) builds an .xlsx with openpyxl: Bill Ref No,
+  Vendor, Bill No, Work Order No, Filling Date, Due Date, Taxable, GST, TDS,
+  Invoice Total, GPV/PV No, Payment Date, UTR No, Payment Mode, Current Status,
+  Approval Status, Approval Date. The "Export to Excel" button sends the active
+  filters through. (`openpyxl>=3.1.5` added to requirements.txt.)
+- Route is declared BEFORE `/{bill_id}` handlers so the literal path wins.
+
 ## Payment Advice PDF
 - `GET /api/bills/{id}/payment-advice` -> branded A4 PDF (lib/pdf.py `payment_advice_pdf`): PV No., UTR/Ref, payment date & mode, voucher status, invoice no/date, PO number, Paid To block (company, vendor code, bank, IFSC, account no, GSTIN), payment summary with taxable/GST/TDS/amount paid and the approver name.
 - Access: own vendor or admin (403 cross-vendor); 400 when no UTR/PV exists yet; 404 unknown bill.

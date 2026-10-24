@@ -30,3 +30,4 @@ jq>=1.6.0
 typer>=0.9.0
 emergentintegrations==0.2.1
 pypdf==6.19.0
+openpyxl>=3.1.5

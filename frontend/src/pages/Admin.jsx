@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Building2, KeyRound, RefreshCw, Trash2, UserPlus, Eye, EyeOff } from "lucide-react";
+import { Building2, Download, KeyRound, RefreshCw, Trash2, UserPlus, Eye, EyeOff } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import RequireAuth from "@/components/RequireAuth";
 import StatusBadge from "@/components/StatusBadge";
@@ -22,6 +22,7 @@ import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
 import { formatINR, useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/useAuth";
 import WorkOrderCopyUpload from "@/components/WorkOrderCopyUpload";
+import { downloadFile } from "@/lib/download";
 
 const EMPTY_USER = { email: "", name: "", role: "vendor", vendor_code: "", password: "" };
 const ROLE_LABELS = { vendor: "Vendor", admin: "Administrator" };
@@ -53,6 +54,20 @@ function AdminInner() {
   const registerRows = register.isError ? [] : register.data ?? [];
   const vendorRows = vendors.isError ? [] : vendors.data ?? [];
   const billRows = bills.isError ? [] : bills.data ?? [];
+  // admin bills view: status + date-range filters for month-end checks
+  const [billStatus, setBillStatus] = useState("all");
+  const [billFrom, setBillFrom] = useState("");
+  const [billTo, setBillTo] = useState("");
+  const filteredBills = useMemo(() => {
+    return billRows.filter((b) => {
+      if (billStatus !== "all" && b.status !== billStatus) return false;
+      const day = String(b.filling_date || b.invoice_date || "").slice(0, 10);
+      if (billFrom && (!day || day < billFrom)) return false;
+      if (billTo && (!day || day > billTo)) return false;
+      return true;
+    });
+  }, [billRows, billStatus, billFrom, billTo]);
+  const filteredTotal = filteredBills.reduce((s, b) => s + (b.total_amount || 0), 0);
   const orderRows = useMemo(() => {
     const list = orders.isError ? [] : orders.data ?? [];
     // one row per work order, even if an older id scheme left a stale copy behind
@@ -588,8 +603,72 @@ function AdminInner() {
                 </p>
               </div>
               <span className="text-xs font-semibold text-slate-500" data-testid="admin-register-count">
-                {billRows.length} bills
+                {filteredBills.length} of {billRows.length} bills · {formatINR(filteredTotal)}
               </span>
+            </div>
+
+            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/60 flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <Label className="text-[11px] uppercase tracking-wide text-slate-500">Status</Label>
+                <select
+                  value={billStatus}
+                  onChange={(e) => setBillStatus(e.target.value)}
+                  data-testid="admin-bill-status-filter"
+                  className="h-8 text-xs border border-slate-200 rounded-md px-2 bg-white text-slate-700
+                    focus:outline-none focus:ring-1 focus:ring-[#1D4ED8]"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="paid">Paid</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] uppercase tracking-wide text-slate-500">Bill date from</Label>
+                <Input
+                  type="date"
+                  value={billFrom}
+                  onChange={(e) => setBillFrom(e.target.value)}
+                  data-testid="admin-bill-date-from"
+                  className="h-8 w-[150px] text-xs bg-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] uppercase tracking-wide text-slate-500">Bill date to</Label>
+                <Input
+                  type="date"
+                  value={billTo}
+                  onChange={(e) => setBillTo(e.target.value)}
+                  data-testid="admin-bill-date-to"
+                  className="h-8 w-[150px] text-xs bg-white"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="admin-bill-filter-reset"
+                onClick={() => { setBillStatus("all"); setBillFrom(""); setBillTo(""); }}
+                className="h-8 text-xs"
+              >
+                Reset
+              </Button>
+              <Button
+                size="sm"
+                data-testid="admin-bill-export-button"
+                onClick={() => {
+                  const p = new URLSearchParams();
+                  if (billStatus !== "all") p.set("status", billStatus);
+                  if (billFrom) p.set("date_from", billFrom);
+                  if (billTo) p.set("date_to", billTo);
+                  const qs = p.toString();
+                  downloadFile(`/api/bills/export.xlsx${qs ? `?${qs}` : ""}`, "arun-bills.xlsx");
+                }}
+                className="h-8 ml-auto gap-1.5 text-xs bg-[#1D4ED8] hover:bg-[#1E40AF] text-white
+                  active:scale-[0.98] [transition:background-color_.18s_ease,transform_.1s_ease]"
+              >
+                <Download size={13} /> Export to Excel
+              </Button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm table-fixed min-w-[1080px]" data-testid="admin-bills-table">
@@ -617,10 +696,10 @@ function AdminInner() {
                   </tr>
                 </thead>
                 <tbody>
-                  {billRows.length === 0 && (
+                  {filteredBills.length === 0 && (
                     <tr><td colSpan={9} className="px-5 py-14 text-center text-slate-400" data-testid="admin-bills-empty">{t("no_data")}</td></tr>
                   )}
-                  {billRows.map((b) => {
+                  {filteredBills.map((b) => {
                     const pv = registerRows.find((p) => p.bill_ref_no === b.invoice_no) || {};
                     return (
                       <tr key={b.id} className="border-t border-slate-100 align-middle hover:bg-slate-50/70 [transition:background-color_.18s_ease]" data-testid={`admin-bill-row-${b.invoice_no}`}>

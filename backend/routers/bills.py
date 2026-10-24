@@ -49,6 +49,78 @@ async def payments_register(user=Depends(current_user)):
     return rows
 
 
+@router.get("/export.xlsx")
+async def export_bills_xlsx(
+    status: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    user=Depends(admin_user),
+):
+    """Admin-only: bills + payment details as an Excel sheet (optional filters)."""
+    from io import BytesIO
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    q: dict = {}
+    if status and status != "all":
+        q["status"] = status
+    docs = await db.bills.find(q, {"_id": 0}).sort("invoice_date", -1).to_list(5000)
+
+    def _in_range(bill: dict) -> bool:
+        day = str(bill.get("filling_date") or bill.get("invoice_date") or "")[:10]
+        if date_from and (not day or day < date_from):
+            return False
+        if date_to and (not day or day > date_to):
+            return False
+        return True
+
+    rows = [b for b in docs if _in_range(b)]
+
+    headers = [
+        "Bill Ref No", "Vendor", "Bill No", "Work Order No", "Filling Date", "Due Date",
+        "Taxable Value", "GST", "TDS", "Invoice Total",
+        "GPV / PV No", "Payment Date", "UTR No", "Payment Mode", "Current Status",
+        "Approval Status", "Approval Date",
+    ]
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Bills"
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    for b in rows:
+        ws.append([
+            b.get("invoice_no", ""),
+            b.get("vendor_name", ""),
+            b.get("bill_no", ""),
+            b.get("po_number", ""),
+            b.get("filling_date") or b.get("invoice_date", ""),
+            b.get("due_date", ""),
+            b.get("taxable_amount", 0),
+            b.get("gst_amount", 0),
+            b.get("tds_amount", 0),
+            b.get("total_amount", 0),
+            b.get("pv_no", ""),
+            b.get("payment_date", ""),
+            b.get("utr", ""),
+            b.get("payment_mode", ""),
+            b.get("status_label") or b.get("status", ""),
+            b.get("approval_status", ""),
+            b.get("approval_date", ""),
+        ])
+    for i, width in enumerate([16, 26, 20, 20, 13, 13, 14, 12, 10, 14, 20, 13, 24, 16, 28, 22, 13], start=1):
+        ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = width
+
+    buf = BytesIO()
+    wb.save(buf)
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="arun-bills.xlsx"'},
+    )
+
+
 @router.patch("/{bill_id}/payment", response_model=Bill)
 async def update_payment(bill_id: str, payload: BillPaymentUpdate, user=Depends(admin_user)):
     """Admin-only: set the payment status and UTR of a bill.
