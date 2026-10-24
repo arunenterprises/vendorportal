@@ -254,7 +254,9 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - UI: Admin Command Center → Bills & Invoices tab now opens with a **Payments
   Register** card (GPV/PV No · Bill Ref No · Bill No · Vendor · Amount · Payment
   Date · UTR No · Current Status; green "Paid · <mode>" once a UTR exists),
-  above the existing read-only bills table.
+  above the existing read-only bills table. The register table uses a fixed
+  8-column layout (`table-fixed` + colgroup, min-width 980px, truncation with
+  title tooltips, right-aligned amounts) and a voucher count in its header.
 - Bills page table has a **Vendor** column (`vendor_name`) next to Invoice No.
 
 ## Payment Advice PDF
