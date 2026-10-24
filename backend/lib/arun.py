@@ -199,7 +199,7 @@ def map_bill(src: dict, vendor: dict) -> dict:
     status = map_bill_status(src)
 
     return {
-        "id": f"arun-bill-{perm}",
+        "id": f"arun-bill-{re.sub(r'[^A-Za-z0-9]+', '-', perm).strip('-')}",
         "invoice_no": perm,
         "vendor_id": vendor["id"],
         "vendor_name": vendor["company_name"],
@@ -216,7 +216,16 @@ def map_bill(src: dict, vendor: dict) -> dict:
         # exact wording from the workflow portal, shown verbatim in the UI/PDF
         "status_label": (src.get("finalReleaseStatus") or src.get("approvalStatus") or "").strip(),
         "utr": "",
-        "paid_date": src.get("approvalDate") if status == "paid" else "",
+        "paid_date": str(src.get("paidAt") or src.get("settledAt") or src.get("approvalDate") or "")[:10] if status == "paid" else "",
+        # Accounts -> Vendor Bill Process timestamps, mirrored verbatim
+        "filling_date": str(src.get("billDate") or "")[:10],
+        "submitted_at": str(src.get("submittedAt") or "")[:10],
+        "submitted_by": src.get("submittedByName") or "",
+        "approved_at": str(src.get("approvedAt") or "")[:10],
+        "approved_by": src.get("approvedByName") or "",
+        "paid_at": str(src.get("paidAt") or "")[:10],
+        "settled_at": str(src.get("settledAt") or "")[:10],
+        "payment_status_upstream": src.get("paymentStatus") or "",
         "remarks": " · ".join(
             p for p in [src.get("approvalStatus"), src.get("finalReleaseStatus"), src.get("todoNotes")] if p
         ),

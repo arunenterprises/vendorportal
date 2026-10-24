@@ -579,33 +579,34 @@ function AdminInner() {
         </TabsContent>
 
         <TabsContent value="bills">
-          <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden mb-6" data-testid="admin-payments-register-card">
+          <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-baseline justify-between gap-2">
               <div>
-                <h2 className="text-base font-semibold text-slate-900">Payments Register</h2>
+                <h2 className="text-base font-semibold text-slate-900">{t("nav_bills")}</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Live mirror of the ERP's Accounts &amp; Vouchers → Payment Vouchers &amp; Due List → Payments Register.
+                  Bill details with their Payments Register voucher (GPV / PV no, payment date, UTR) in one view.
                 </p>
               </div>
               <span className="text-xs font-semibold text-slate-500" data-testid="admin-register-count">
-                {registerRows.length} vouchers
+                {billRows.length} bills
               </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm table-fixed min-w-[980px]" data-testid="admin-payments-register-table">
+              <table className="w-full text-sm table-fixed min-w-[1080px]" data-testid="admin-bills-table">
                 <colgroup>
-                  <col className="w-[13%]" />
                   <col className="w-[11%]" />
-                  <col className="w-[15%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[12%]" />
                   <col className="w-[16%]" />
-                  <col className="w-[11%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[14%]" />
-                  <col className="w-[10%]" />
+                  <col className="w-[9%]" />
                 </colgroup>
                 <thead className="bg-slate-50 text-slate-500">
                   <tr className="text-left">
-                    {["GPV / PV No", "Bill Ref No", "Bill No", "Vendor", "Amount", "Payment Date", "UTR No", "Current Status"].map((h) => (
+                    {["Bill Ref No", "Vendor", "Bill No", "Amount", "GPV / PV No", "Payment Date", "UTR No", "Current Status", "Due Date"].map((h) => (
                       <th
                         key={h}
                         className={`px-3 py-3 font-semibold text-[11px] uppercase tracking-wide ${h === "Amount" ? "text-right" : ""}`}
@@ -616,66 +617,29 @@ function AdminInner() {
                   </tr>
                 </thead>
                 <tbody>
-                  {registerRows.length === 0 && (
-                    <tr><td colSpan={8} className="px-5 py-14 text-center text-slate-400" data-testid="admin-payments-register-empty">
-                      {register.isLoading ? t("loading") : t("no_data")}
-                    </td></tr>
-                  )}
-                  {registerRows.map((p) => (
-                    <tr key={p.id} className="border-t border-slate-100 align-middle hover:bg-slate-50/70 [transition:background-color_.18s_ease]" data-testid={`admin-register-row-${p.pv_no}`}>
-                      <td className="px-3 py-3 font-mono text-[11px] font-semibold text-slate-900 truncate" title={p.pv_no}>{p.pv_no || "—"}</td>
-                      <td className="px-3 py-3 font-mono text-[11px] text-[#1D4ED8] truncate" title={p.bill_ref_no}>{p.bill_ref_no || "—"}</td>
-                      <td className="px-3 py-3 font-mono text-[11px] text-slate-500 truncate" title={p.bill_no}>{p.bill_no || "—"}</td>
-                      <td className="px-3 py-3 text-slate-700 truncate" title={p.vendor_name || p.vendor_code}>{p.vendor_name || p.vendor_code || "—"}</td>
-                      <td className="px-3 py-3 font-semibold text-slate-900 text-right whitespace-nowrap">{formatINR(p.amount)}</td>
-                      <td className="px-3 py-3 text-slate-600 whitespace-nowrap text-xs">{p.payment_date || "—"}</td>
-                      <td className="px-3 py-3 font-mono text-[11px] text-slate-600 truncate" title={p.utr_no}>{p.utr_no || "—"}</td>
-                      <td className="px-3 py-3">
-                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold whitespace-nowrap ${
-                          p.utr_no
-                            ? "bg-emerald-50 text-emerald-700"
-                            : /reject/i.test(p.status || "")
-                              ? "bg-red-50 text-red-700"
-                              : "bg-amber-50 text-amber-700"
-                        }`}>
-                          {p.utr_no ? `Paid${p.mode ? ` · ${p.mode}` : ""}` : p.status || "Pending"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-200">
-              <h2 className="text-base font-semibold text-slate-900">{t("nav_bills")}</h2>
-              <p className="text-xs text-slate-500 mt-0.5">{t("read_only_note")}</p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" data-testid="admin-bills-table">
-                <thead className="bg-slate-50 text-slate-500">
-                  <tr className="text-left">
-                    {["invoice_no", "vendor", "total", "status", "utr", "due_date"].map((h) => (
-                      <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{t(h)}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
                   {billRows.length === 0 && (
-                    <tr><td colSpan={6} className="px-5 py-14 text-center text-slate-400" data-testid="admin-bills-empty">{t("no_data")}</td></tr>
+                    <tr><td colSpan={9} className="px-5 py-14 text-center text-slate-400" data-testid="admin-bills-empty">{t("no_data")}</td></tr>
                   )}
-                  {billRows.map((b) => (
-                    <tr key={b.id} className="border-t border-slate-100" data-testid={`admin-bill-row-${b.invoice_no}`}>
-                      <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-900">{b.invoice_no}</td>
-                      <td className="px-4 py-3.5 text-slate-700 max-w-[200px] truncate">{b.vendor_name}</td>
-                      <td className="px-4 py-3.5 font-semibold whitespace-nowrap">{formatINR(b.total_amount)}</td>
-                      <td className="px-4 py-3.5"><StatusBadge status={b.status} label={b.status_label} /></td>
-                      <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500">{b.utr || "—"}</td>
-                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">{b.due_date || "—"}</td>
-                    </tr>
-                  ))}
+                  {billRows.map((b) => {
+                    const pv = registerRows.find((p) => p.bill_ref_no === b.invoice_no) || {};
+                    return (
+                      <tr key={b.id} className="border-t border-slate-100 align-middle hover:bg-slate-50/70 [transition:background-color_.18s_ease]" data-testid={`admin-bill-row-${b.invoice_no}`}>
+                        <td className="px-3 py-3 font-mono text-[11px] font-semibold text-slate-900 truncate" title={b.invoice_no}>{b.invoice_no}</td>
+                        <td className="px-3 py-3 text-slate-700 truncate" title={b.vendor_name}>{b.vendor_name}</td>
+                        <td className="px-3 py-3 font-mono text-[11px] text-slate-500 truncate" title={b.bill_no}>{b.bill_no || "—"}</td>
+                        <td className="px-3 py-3 font-semibold text-slate-900 text-right whitespace-nowrap">{formatINR(b.total_amount)}</td>
+                        <td className="px-3 py-3 font-mono text-[11px] text-[#1D4ED8] truncate" title={pv.pv_no || b.pv_no}>{pv.pv_no || b.pv_no || "—"}</td>
+                        <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{pv.payment_date || b.payment_date || "—"}</td>
+                        <td className="px-3 py-3 font-mono text-[11px] text-slate-600 truncate" title={pv.utr_no || b.utr}>{pv.utr_no || b.utr || "—"}</td>
+                        <td className="px-3 py-3 overflow-hidden">
+                          <div className="max-w-full truncate" title={b.status_label || b.status}>
+                            <StatusBadge status={b.status} label={b.status_label} />
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{b.due_date || "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

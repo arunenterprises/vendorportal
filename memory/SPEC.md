@@ -251,13 +251,29 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   `approved_by`. Vouchers the register no longer has are deleted each sync.
 - `GET /api/bills/payments-register` — admin sees all, a vendor only its own
   `vendor_code` rows, 401 unauthenticated.
-- UI: Admin Command Center → Bills & Invoices tab now opens with a **Payments
-  Register** card (GPV/PV No · Bill Ref No · Bill No · Vendor · Amount · Payment
-  Date · UTR No · Current Status; green "Paid · <mode>" once a UTR exists),
-  above the existing read-only bills table. The register table uses a fixed
-  8-column layout (`table-fixed` + colgroup, min-width 980px, truncation with
-  title tooltips, right-aligned amounts) and a voucher count in its header.
+- UI: Admin Command Center → Bills & Invoices tab shows ONE merged table —
+  Bill Ref No · Vendor · Bill No · Amount · GPV/PV No · Payment Date · UTR No ·
+  Current Status · Due Date (voucher joined on `bill_ref_no == invoice_no`,
+  falling back to the bill's own pv_no/payment_date/utr). The separate
+  "Payments Register" card was merged away on the user's request.
 - Bills page table has a **Vendor** column (`vendor_name`) next to Invoice No.
+
+## Dashboard tiles from Accounts → Vendor Bill Process
+- Upstream `GET /api/bills` IS the ERP's **Accounts → Vendor Bill Process** section.
+  `map_bill` now also mirrors its timeline verbatim: `filling_date` (billDate),
+  `submitted_at`/`submitted_by`, `approved_at`/`approved_by`, `paid_at`,
+  `settled_at`, `payment_status_upstream` (all on the `Bill` model too, else the
+  response_model strips them).
+- `GET /api/summary` returns the dashboard blocks: `current_bill_*`
+  (newest by filling_date — amount, bill no, filling date, upstream status label),
+  `approved_bill_*` (newest with an approvalDate — amount, bill no, approval date),
+  `cleared_bill_no/date` (newest paid), `balance_bill_*` (pending total + bill no
+  + due date) and `active_orders`.
+- Dashboard shows 6 tiles in business order: Total Bill Amount · Current Bill
+  Amount (bill no + filled date + live status) · Approved Bill Amount (bill no +
+  approved date) · Cleared Bill Amount (bill no + paid date) · Balance Bill
+  Amount (bill no + due date) · Active Work Orders. 3-up grid, each tile has
+  `kpi-value-*` / `kpi-meta-*` testids.
 
 ## Payment Advice PDF
 - `GET /api/bills/{id}/payment-advice` -> branded A4 PDF (lib/pdf.py `payment_advice_pdf`): PV No., UTR/Ref, payment date & mode, voucher status, invoice no/date, PO number, Paid To block (company, vendor code, bank, IFSC, account no, GSTIN), payment summary with taxable/GST/TDS/amount paid and the approver name.

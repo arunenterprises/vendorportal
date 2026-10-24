@@ -105,11 +105,29 @@ function BillsInner() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm" data-testid="bills-table">
+          <table className="w-full text-sm table-fixed min-w-[1080px]" data-testid="bills-table">
+            <colgroup>
+              <col className="w-[10%]" />
+              <col className="w-[11%]" />
+              <col className="w-[10%]" />
+              <col className="w-[9%]" />
+              <col className="w-[8%]" />
+              <col className="w-[9%]" />
+              <col className="w-[7%]" />
+              <col className="w-[7%]" />
+              <col className="w-[9%]" />
+              <col className="w-[11%]" />
+              <col className="w-[9%]" />
+            </colgroup>
             <thead className="bg-slate-50 text-slate-500">
               <tr className="text-left">
                 {["invoice_no", "vendor", "bill_no", "po_number", "invoice_date", "taxable", "gst", "tds", "total", "status", "actions"].map((h) => (
-                  <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
+                  <th
+                    key={h}
+                    className={`px-3 py-3 font-semibold text-[11px] uppercase tracking-wide ${
+                      ["taxable", "gst", "tds", "total"].includes(h) ? "text-right" : ""
+                    }`}
+                  >
                     {h === "bill_no" ? "Bill No" : t(h)}
                   </th>
                 ))}
@@ -127,28 +145,28 @@ function BillsInner() {
                 <tr
                   key={b.id}
                   onClick={() => setOpen(b)}
-                  className="border-t border-slate-100 hover:bg-slate-50/70 cursor-pointer [transition:background-color_.18s_ease]"
+                  className="border-t border-slate-100 align-top hover:bg-slate-50/70 cursor-pointer [transition:background-color_.18s_ease]"
                   data-testid={`bill-row-${b.invoice_no}`}
                 >
-                  <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-900 whitespace-nowrap">
+                  <td className="px-3 py-3 font-mono text-[11px] font-semibold text-slate-900 truncate" title={b.invoice_no}>
                     {b.invoice_no}
                   </td>
-                  <td className="px-4 py-3.5 text-slate-700 max-w-[180px] truncate" data-testid={`bill-vendor-${b.invoice_no}`}>
+                  <td className="px-3 py-3 text-slate-700 truncate" title={b.vendor_name} data-testid={`bill-vendor-${b.invoice_no}`}>
                     {b.vendor_name || "—"}
                   </td>
-                  <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">{b.bill_no || "—"}</td>
-                  <td className="px-4 py-3.5 font-mono text-xs text-[#1D4ED8] whitespace-nowrap">{b.po_number}</td>
-                  <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">{b.invoice_date}</td>
-                  <td className="px-4 py-3.5 whitespace-nowrap text-slate-700">{formatINR(b.taxable_amount)}</td>
-                  <td className="px-4 py-3.5 whitespace-nowrap text-slate-700">{formatINR(b.gst_amount)}</td>
-                  <td className="px-4 py-3.5 whitespace-nowrap text-slate-500">-{formatINR(b.tds_amount)}</td>
-                  <td className="px-4 py-3.5 whitespace-nowrap font-semibold text-slate-900">
+                  <td className="px-3 py-3 font-mono text-[11px] text-slate-500 truncate" title={b.bill_no}>{b.bill_no || "—"}</td>
+                  <td className="px-3 py-3 font-mono text-[11px] text-[#1D4ED8] truncate" title={b.po_number}>{b.po_number}</td>
+                  <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{b.invoice_date}</td>
+                  <td className="px-3 py-3 text-right whitespace-nowrap text-slate-700">{formatINR(b.taxable_amount)}</td>
+                  <td className="px-3 py-3 text-right whitespace-nowrap text-slate-700">{formatINR(b.gst_amount)}</td>
+                  <td className="px-3 py-3 text-right whitespace-nowrap text-slate-500">-{formatINR(b.tds_amount)}</td>
+                  <td className="px-3 py-3 text-right whitespace-nowrap font-semibold text-slate-900">
                     {formatINR(b.total_amount)}
                   </td>
-                  <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <StatusBadge status={b.status} label={b.status_label} />
                     {isAdmin ? (
-                      <div className="mt-2 flex flex-col gap-1.5 min-w-[190px]">
+                      <div className="mt-2 flex flex-col gap-1.5">
                         <select
                           value={draft[b.id]?.status ?? b.status}
                           onChange={(e) => setDraft({ ...draft, [b.id]: { ...(draft[b.id] || { utr: b.utr || "" }), status: e.target.value } })}
@@ -189,7 +207,7 @@ function BillsInner() {
                       <p className="text-[11px] text-slate-500 mt-1 font-mono">{b.utr}</p>
                     ) : null}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="px-3 py-3">
                     <Button
                       variant="outline"
                       size="sm"
@@ -198,9 +216,9 @@ function BillsInner() {
                         e.stopPropagation();
                         downloadFile(`/api/bills/${b.id}/pdf`, `${b.invoice_no}.pdf`);
                       }}
-                      className="gap-1.5 whitespace-nowrap"
+                      className="h-8 w-full gap-1.5 text-xs whitespace-nowrap px-2"
                     >
-                      <Download size={14} /> PDF
+                      <Download size={13} /> PDF
                     </Button>
                   </td>
                 </tr>

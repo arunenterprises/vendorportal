@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Banknote, FileText, IndianRupee, Wallet } from "lucide-react";
+import { ArrowUpRight, Banknote, CheckCircle2, FileText, IndianRupee, Wallet } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import StatusBadge from "@/components/StatusBadge";
 import RequireAuth from "@/components/RequireAuth";
@@ -10,11 +10,67 @@ import { apiGet } from "@/lib/api";
 import { formatCompactINR, formatINR, useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/useAuth";
 
-const KPIS = [
-  { key: "total_billed", labelKey: "stat_total_billed", icon: IndianRupee, tone: "text-slate-900" },
-  { key: "pending_payment", labelKey: "stat_pending", icon: Wallet, tone: "text-amber-700" },
-  { key: "cleared_payment", labelKey: "stat_cleared", icon: Banknote, tone: "text-emerald-700" },
-];
+const KPIS_UNUSED_REMOVED = true;
+
+// Dashboard summary tiles in the order the business reads them:
+// total -> current bill -> approved bill -> cleared -> balance -> active work orders
+function STAT_TILES(s) {
+  return [
+    {
+      key: "total_billed",
+      label: "Total Bill Amount",
+      value: s ? formatINR(s.total_billed) : "—",
+      icon: IndianRupee,
+      tone: "text-slate-900",
+    },
+    {
+      key: "current_bill",
+      label: "Current Bill Amount",
+      value: s ? formatINR(s.current_bill_amount) : "—",
+      meta: s?.current_bill_no ? `${s.current_bill_no}${s.current_bill_date ? ` · Filled ${s.current_bill_date}` : ""}` : "—",
+      extra: s?.current_bill_status || "",
+      icon: FileText,
+      tone: "text-slate-900",
+    },
+    {
+      key: "approved_bill",
+      label: "Approved Bill Amount",
+      value: s ? formatINR(s.approved_bill_amount) : "—",
+      meta: s?.approved_bill_no ? `${s.approved_bill_no}${s.approved_bill_date ? ` · Approved ${s.approved_bill_date}` : ""}` : "—",
+      icon: CheckCircle2,
+      tone: "text-blue-800",
+    },
+    {
+      key: "cleared_payment",
+      label: "Cleared Bill Amount",
+      value: s ? formatINR(s.cleared_payment) : "—",
+      meta: s?.cleared_bill_date
+        ? `${s.cleared_bill_no ? `${s.cleared_bill_no} · ` : ""}Paid ${s.cleared_bill_date}`
+        : "—",
+      icon: Banknote,
+      tone: "text-emerald-700",
+    },
+    {
+      key: "balance_bill",
+      label: "Balance Bill Amount",
+      value: s ? formatINR(s.balance_bill_amount) : "—",
+      meta: s?.balance_bill_date
+        ? `${s.balance_bill_no ? `${s.balance_bill_no} · ` : ""}Due ${s.balance_bill_date}`
+        : "—",
+      icon: Wallet,
+      tone: "text-amber-700",
+    },
+    {
+      key: "active_orders",
+      label: "Active Work Orders",
+      value: s ? String(s.active_orders) : "—",
+      meta: s ? `${s.total_bills} bills on record` : "—",
+      icon: FileText,
+      tone: "text-white",
+      dark: true,
+    },
+  ];
+}
 
 function DashboardInner() {
   const { t } = useI18n();
@@ -50,38 +106,48 @@ function DashboardInner() {
             : ""
       }
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-        {KPIS.map((k) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+        {STAT_TILES(s).map((tile) => (
           <Card
-            key={k.key}
-            data-testid={`kpi-card-${k.key}`}
-            className="p-5 bg-white border-slate-200 rounded-xl shadow-sm hover:-translate-y-0.5 hover:shadow-md [transition:transform_.2s_ease,box-shadow_.2s_ease]"
+            key={tile.key}
+            data-testid={`kpi-card-${tile.key}`}
+            className={`p-5 rounded-xl shadow-sm hover:-translate-y-0.5 hover:shadow-md [transition:transform_.2s_ease,box-shadow_.2s_ease] ${
+              tile.dark ? "bg-[#0B132B] border-[#0B132B]" : "bg-white border-slate-200"
+            }`}
           >
-            <div className="flex items-start justify-between">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500 font-semibold leading-snug">
-                {t(k.labelKey)}
+            <div className="flex items-start justify-between gap-3">
+              <p
+                className={`text-[11px] uppercase tracking-[0.12em] font-semibold leading-snug ${
+                  tile.dark ? "text-slate-400" : "text-slate-500"
+                }`}
+              >
+                {tile.label}
               </p>
-              <k.icon size={17} className="text-slate-400 shrink-0" />
+              <tile.icon size={17} className={`shrink-0 ${tile.dark ? "text-blue-400" : "text-slate-400"}`} />
             </div>
-            <p className={`text-[26px] font-semibold mt-3 ${k.tone}`} data-testid={`kpi-value-${k.key}`}>
-              {s ? formatCompactINR(s[k.key]) : "—"}
+            <p className={`text-[26px] font-semibold mt-3 leading-tight ${tile.tone}`} data-testid={`kpi-value-${tile.key}`}>
+              {tile.value}
             </p>
+            {tile.meta !== undefined && (
+              <p
+                className={`mt-1.5 text-[11px] font-mono truncate ${tile.dark ? "text-slate-400" : "text-slate-500"}`}
+                title={tile.meta}
+                data-testid={`kpi-meta-${tile.key}`}
+              >
+                {tile.meta}
+              </p>
+            )}
+            {tile.extra ? (
+              <p
+                className="mt-1 text-[11px] font-semibold text-blue-800 truncate"
+                title={tile.extra}
+                data-testid={`kpi-extra-${tile.key}`}
+              >
+                {tile.extra}
+              </p>
+            ) : null}
           </Card>
         ))}
-        <Card
-          data-testid="kpi-card-active_orders"
-          className="p-5 bg-[#0B132B] border-[#0B132B] rounded-xl shadow-sm hover:-translate-y-0.5 hover:shadow-md [transition:transform_.2s_ease,box-shadow_.2s_ease]"
-        >
-          <div className="flex items-start justify-between">
-            <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400 font-semibold leading-snug">
-              {t("stat_active_orders")}
-            </p>
-            <FileText size={17} className="text-blue-400 shrink-0" />
-          </div>
-          <p className="text-[26px] font-semibold mt-3 text-white" data-testid="kpi-value-active_orders">
-            {s ? s.active_orders : "—"}
-          </p>
-        </Card>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-6">

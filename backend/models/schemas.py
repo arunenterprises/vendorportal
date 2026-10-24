@@ -267,6 +267,15 @@ class Bill(BaseModel):
     gst_tds_check: str = ""
     wo_rate_status: str = ""
     process_date: str = ""
+    # Accounts -> Vendor Bill Process timeline (upstream, verbatim)
+    filling_date: str = ""
+    submitted_at: str = ""
+    submitted_by: str = ""
+    approved_at: str = ""
+    approved_by: str = ""
+    paid_at: str = ""
+    settled_at: str = ""
+    payment_status_upstream: str = ""
     todo_notes: str = ""
     other_deductions: float = 0
     previous_advance: float = 0
@@ -307,3 +316,16 @@ class Summary(BaseModel):
     active_orders: int
     total_bills: int
     vendors_count: int
+    # dashboard detail blocks (latest bill per stage) — empty strings when none
+    current_bill_amount: float = 0.0
+    current_bill_no: str = ""
+    current_bill_date: str = ""
+    current_bill_status: str = ""
+    approved_bill_amount: float = 0.0
+    approved_bill_no: str = ""
+    approved_bill_date: str = ""
+    cleared_bill_date: str = ""
+    cleared_bill_no: str = ""
+    balance_bill_amount: float = 0.0
+    balance_bill_date: str = ""
+    balance_bill_no: str = ""
