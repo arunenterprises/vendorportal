@@ -251,6 +251,11 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   `approved_by`. Vouchers the register no longer has are deleted each sync.
 - `GET /api/bills/payments-register` — admin sees all, a vendor only its own
   `vendor_code` rows, 401 unauthenticated.
+- The **Amount (₹)** column shows the ERP Payments Register voucher amount
+  (`payment_vouchers.amount`, i.e. what the voucher's Edit/Delete/Reschedule view
+  shows against its GPV/PN no); the bill's own invoice total is only used as a
+  fallback until a voucher exists, and is printed as a small second line when the
+  two differ.
 - UI: Admin Command Center → Bills & Invoices tab shows ONE merged table —
   Bill Ref No · Vendor · Bill No · Amount · GPV/PV No · Payment Date · UTR No ·
   Current Status · Due Date (voucher joined on `bill_ref_no == invoice_no`,

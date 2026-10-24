@@ -724,10 +724,10 @@ function AdminInner() {
                 </colgroup>
                 <thead className="bg-slate-50 text-slate-500">
                   <tr className="text-left">
-                    {["Bill Ref No", "Vendor", "Bill No", "Amount", "GPV / PV No", "Payment Date", "UTR No", "Current Status", "Due Date"].map((h) => (
+                    {["Bill Ref No", "Vendor", "Bill No", "Amount (₹)", "GPV / PV No", "Payment Date", "UTR No", "Current Status", "Due Date"].map((h) => (
                       <th
                         key={h}
-                        className={`px-3 py-3 font-semibold text-[11px] uppercase tracking-wide ${h === "Amount" ? "text-right" : ""}`}
+                        className={`px-3 py-3 font-semibold text-[11px] uppercase tracking-wide ${h === "Amount (₹)" ? "text-right" : ""}`}
                       >
                         {h}
                       </th>
@@ -745,7 +745,17 @@ function AdminInner() {
                         <td className="px-3 py-3 font-mono text-[11px] font-semibold text-slate-900 truncate" title={b.invoice_no}>{b.invoice_no}</td>
                         <td className="px-3 py-3 text-slate-700 truncate" title={b.vendor_name}>{b.vendor_name}</td>
                         <td className="px-3 py-3 font-mono text-[11px] text-slate-500 truncate" title={b.bill_no}>{b.bill_no || "—"}</td>
-                        <td className="px-3 py-3 font-semibold text-slate-900 text-right whitespace-nowrap">{formatINR(b.total_amount)}</td>
+                        <td className="px-3 py-3 text-right whitespace-nowrap" data-testid={`admin-bill-amount-${b.invoice_no}`}>
+                          {/* Amount as shown in the ERP Payments Register voucher; falls back to the bill total until a voucher exists */}
+                          <span className="font-semibold text-slate-900">
+                            {formatINR(pv.amount != null ? pv.amount : b.total_amount)}
+                          </span>
+                          {pv.amount != null && Math.round((pv.amount - (b.total_amount || 0)) * 100) !== 0 ? (
+                            <span className="block text-[10px] text-slate-400" title="Invoice total on the bill">
+                              {`bill ${formatINR(b.total_amount)}`}
+                            </span>
+                          ) : null}
+                        </td>
                         <td className="px-3 py-3 font-mono text-[11px] text-[#1D4ED8] truncate" title={pv.pv_no || b.pv_no}>{pv.pv_no || b.pv_no || "—"}</td>
                         <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{pv.payment_date || b.payment_date || "—"}</td>
                         <td className="px-3 py-3 font-mono text-[11px] text-slate-600 truncate" title={pv.utr_no || b.utr}>{pv.utr_no || b.utr || "—"}</td>
