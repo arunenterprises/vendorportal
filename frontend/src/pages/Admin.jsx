@@ -19,7 +19,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
-import { formatINR, useI18n } from "@/lib/i18n";
+import { formatDMY, formatINR, useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/useAuth";
 import WorkOrderCopyUpload from "@/components/WorkOrderCopyUpload";
 import { downloadFile } from "@/lib/download";
@@ -784,7 +784,7 @@ function AdminInner() {
                           </span>
                         </td>
                         <td className="px-2 py-2.5 font-mono text-[11px] text-[#1D4ED8] break-all leading-snug" title={pv.pv_no || b.pv_no}>{pv.pv_no || b.pv_no || "—"}</td>
-                        <td className="px-2 py-2.5 text-slate-600 text-[11px] whitespace-nowrap">{pv.payment_date || b.payment_date || "—"}</td>
+                        <td className="px-2 py-2.5 text-slate-600 text-[11px] whitespace-nowrap">{formatDMY(pv.payment_date || b.payment_date) || "—"}</td>
                         <td className="px-2 py-2.5 font-mono text-[11px] text-slate-600 break-all leading-snug" title={pv.utr_no || b.utr}>{pv.utr_no || b.utr || "—"}</td>
                         <td className="px-2 py-2.5" data-testid={`admin-bill-status-${b.invoice_no}`}>
                           {/* Status exactly as the ERP Payments Register voucher shows it; bill status only until a voucher exists */}
@@ -816,7 +816,7 @@ function AdminInner() {
                             </span>
                           )}
                         </td>
-                        <td className="px-2 py-2.5 text-slate-600 text-[11px] whitespace-nowrap">{b.due_date || "—"}</td>
+                        <td className="px-2 py-2.5 text-slate-600 text-[11px] whitespace-nowrap">{formatDMY(b.due_date) || "—"}</td>
                       </tr>
                     );
                   })}

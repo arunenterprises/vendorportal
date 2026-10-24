@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { apiGet, apiPatch } from "@/lib/api";
 import { downloadFile } from "@/lib/download";
-import { formatINR, useI18n } from "@/lib/i18n";
+import { formatDMY, formatINR, useI18n } from "@/lib/i18n";
 
 const FILTERS = ["all", "active", "completed", "on_hold"];
 
@@ -277,7 +277,7 @@ function WorkOrdersInner() {
                         {o.stages_total ? `${o.stages_done}/${o.stages_total}` : `${done}/${total}`}
                       </span>
                     </td>
-                    <td className="px-3 py-3 align-top whitespace-nowrap text-slate-600 text-xs">{o.due_date}</td>
+                    <td className="px-3 py-3 align-top whitespace-nowrap text-slate-600 text-xs">{formatDMY(o.due_date)}</td>
                     <td className="px-3 py-3 align-top overflow-hidden">
                       <div className="max-w-full truncate" title={o.status_label || o.status}>
                         <StatusBadge status={o.status} />

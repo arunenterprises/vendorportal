@@ -129,8 +129,8 @@ export default function WorkOrderCopyUpload() {
           ) : (
           <Select value={woId} onValueChange={setWoId} disabled={!vendorId}>
             <SelectTrigger data-testid="wo-upload-order-select" className="bg-white">
-              <SelectValue placeholder="Select work order">
-                {selected?.po_number ?? "Select work order"}
+              <SelectValue placeholder={vendorId ? "Select work order" : "Select a vendor first"}>
+                {selected?.po_number ?? (vendorId ? "Select work order" : "Select a vendor first")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -171,8 +171,13 @@ export default function WorkOrderCopyUpload() {
         </div>
 
         <Button
-          onClick={() => upload.mutate()}
-          disabled={!target || !file || upload.isPending}
+          onClick={() => {
+            // never block the click: tell the admin exactly what is missing instead
+            if (!target) return toast.error("Select or type a work order first");
+            if (!file) return toast.error("Choose the work order copy (PDF or image) first");
+            upload.mutate();
+          }}
+          disabled={upload.isPending}
           data-testid="wo-upload-button"
           className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white gap-2 active:scale-[0.98]
             [transition:background-color_.18s_ease,transform_.1s_ease]"

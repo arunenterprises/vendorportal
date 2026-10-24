@@ -7,7 +7,7 @@ import RequireAuth from "@/components/RequireAuth";
 import ChangeAlerts from "@/components/ChangeAlerts";
 import { Card } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
-import { formatCompactINR, formatINR, useI18n } from "@/lib/i18n";
+import { formatCompactINR, formatDMY, formatINR, useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/useAuth";
 
 const KPIS_UNUSED_REMOVED = true;
@@ -17,7 +17,7 @@ const KPIS_UNUSED_REMOVED = true;
 // Every bill tile carries its bill no and the date it was submitted upstream.
 function STAT_TILES(s) {
   const billLine = (no, submitted) =>
-    no ? `${no}${submitted ? ` · Submitted ${submitted}` : ""}` : "—";
+    no ? `${no}${submitted ? ` · Submitted ${formatDMY(submitted)}` : ""}` : "—";
   return [
     {
       key: "total_billed",
@@ -32,7 +32,7 @@ function STAT_TILES(s) {
       label: "Cleared Bill Amount",
       value: s ? formatINR(s.cleared_payment) : "—",
       meta: s ? billLine(s.cleared_bill_no, s.cleared_bill_submitted) : "—",
-      extra: s?.cleared_bill_date ? `Paid ${s.cleared_bill_date}` : "",
+      extra: s?.cleared_bill_date ? `Paid ${formatDMY(s.cleared_bill_date)}` : "",
       extraTone: "text-emerald-700",
       icon: Banknote,
       tone: "text-emerald-700",
@@ -42,7 +42,7 @@ function STAT_TILES(s) {
       label: "Previous Bill & Amount",
       value: s ? formatINR(s.last_bill_amount) : "—",
       meta: s ? billLine(s.last_bill_no, s.last_bill_submitted) : "—",
-      extra: s?.last_bill_paid_date ? `Paid ${s.last_bill_paid_date}` : "",
+      extra: s?.last_bill_paid_date ? `Paid ${formatDMY(s.last_bill_paid_date)}` : "",
       extraTone: "text-emerald-700",
       icon: CheckCircle2,
       tone: "text-slate-900",
@@ -62,10 +62,14 @@ function STAT_TILES(s) {
       label: "Balance Bill Amount",
       value: s ? formatINR(s.balance_bill_amount) : "—",
       meta: s ? billLine(s.balance_bill_no, s.balance_bill_submitted) : "—",
-      extra: s?.balance_bill_status || (s?.balance_bill_date ? `Due ${s.balance_bill_date}` : ""),
-      extraTone: "text-amber-700",
+      extra: s
+        ? s.balance_bill_amount
+          ? s.balance_bill_status || (s.balance_bill_date ? `Due ${formatDMY(s.balance_bill_date)}` : "")
+          : "Fully paid"
+        : "",
+      extraTone: s && !s.balance_bill_amount ? "text-emerald-700" : "text-amber-700",
       icon: Wallet,
-      tone: "text-amber-700",
+      tone: s && !s.balance_bill_amount ? "text-emerald-700" : "text-amber-700",
     },
     {
       key: "active_orders",

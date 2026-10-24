@@ -297,9 +297,10 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   Cleared Bill Amount (bill no + submitted date + paid date) · Previous Bill &
   Amount (second most recent paid bill with its paid date) · Current Bill &
   Amount (bill no + submitted date + live upstream status) · Balance Bill Amount
-  (bill no + submitted date + status/due) · Active Work Orders. Every bill tile
-  prints its bill no and upstream submitted date. 3-up grid, each tile has
-  `kpi-value-*` / `kpi-meta-*` / `kpi-extra-*` testids.
+  (bill no + submitted date + status/due; it mirrors the CURRENT bill and becomes
+  ₹0 with a green "Fully paid" note once that bill is paid) · Active Work Orders.
+  Every bill tile prints its bill no and upstream submitted date, and all UI
+  dates render dd/mm/yyyy via `formatDMY()` in lib/i18n.jsx (API stays ISO).
 
 ## Table layout pass (user: "layout set kijiye")
 - Bills, Work Orders, Documents and the Admin bills table all use a fixed layout

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { apiGet, apiPatch } from "@/lib/api";
 import { downloadFile } from "@/lib/download";
-import { formatINR, useI18n } from "@/lib/i18n";
+import { formatDMY, formatINR, useI18n } from "@/lib/i18n";
 
 const FILTERS = ["all", "pending", "under_review", "paid", "rejected"];
 
@@ -156,7 +156,7 @@ function BillsInner() {
                   </td>
                   <td className="px-3 py-3 font-mono text-[11px] text-slate-500 truncate" title={b.bill_no}>{b.bill_no || "—"}</td>
                   <td className="px-3 py-3 font-mono text-[11px] text-[#1D4ED8] truncate" title={b.po_number}>{b.po_number}</td>
-                  <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{b.invoice_date}</td>
+                  <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{formatDMY(b.invoice_date)}</td>
                   <td className="px-3 py-3 text-right whitespace-nowrap text-slate-700">{formatINR(b.taxable_amount)}</td>
                   <td className="px-3 py-3 text-right whitespace-nowrap text-slate-700">{formatINR(b.gst_amount)}</td>
                   <td className="px-3 py-3 text-right whitespace-nowrap text-slate-500">-{formatINR(b.tds_amount)}</td>

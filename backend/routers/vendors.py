@@ -65,7 +65,9 @@ async def summary(user=Depends(current_user)):
     )
     cleared_bill = paid_bills[0] if paid_bills else {}
     previous_paid = paid_bills[1] if len(paid_bills) > 1 else {}
-    balance_bill = _newest([b for b in bills if b.get("status") in ("pending", "under_review")], "due_date")
+    # the balance is the CURRENT bill's own unpaid amount — once it is paid it is 0
+    balance_bill = current if current.get("status") != "paid" else {}
+    balance_amount = 0.0 if current.get("status") == "paid" else _amount(current)
 
     return Summary(
         total_billed=round(total_billed, 2),
@@ -91,7 +93,7 @@ async def summary(user=Depends(current_user)):
         last_bill_no=str(previous_paid.get("bill_no") or previous_paid.get("invoice_no") or ""),
         last_bill_paid_date=str(previous_paid.get("paid_date") or previous_paid.get("payment_date") or ""),
         last_bill_submitted=str(previous_paid.get("submitted_at") or previous_paid.get("filling_date") or ""),
-        balance_bill_amount=round(pending, 2),
+        balance_bill_amount=balance_amount,
         balance_bill_date=str(balance_bill.get("due_date") or balance_bill.get("filling_date") or ""),
         balance_bill_no=str(balance_bill.get("bill_no") or balance_bill.get("invoice_no") or ""),
         balance_bill_status=str(balance_bill.get("status_label") or balance_bill.get("approval_status") or ""),

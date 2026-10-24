@@ -172,8 +172,17 @@ export function formatINR(value) {
   return `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
 }
 
-export function formatCompactINR(value) {
-  const n = Number(value || 0);
+// Dates everywhere in the UI read dd/mm/yyyy (Indian convention).
+export function formatDMY(value) {
+  if (!value) return "";
+  const raw = String(value).slice(0, 10);
+  const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString("en-GB");
+}
+
+export function formatCompactINR(value) {  const n = Number(value || 0);
   if (n >= 10000000) return `₹${(n / 10000000).toFixed(2)} Cr`;
   if (n >= 100000) return `₹${(n / 100000).toFixed(2)} L`;
   return formatINR(n);
