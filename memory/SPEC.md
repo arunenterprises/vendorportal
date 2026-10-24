@@ -251,9 +251,15 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   `approved_by`. Vouchers the register no longer has are deleted each sync.
 - `GET /api/bills/payments-register` — admin sees all, a vendor only its own
   `vendor_code` rows, 401 unauthenticated.
+- An **Advance / Deductions** column sits just before Amount and shows the
+  Vendor Bill Process field "Other Deductions / Penalties"
+  (`bills.other_deductions`, mapped from upstream `otherDeductions`), with the
+  upstream `previousAdvance` note (`previous_advance_note`) as a small second
+  line. Both are also columns in the Excel export.
 - The **Current Status** column likewise shows the voucher's own status verbatim
-  (`payment_vouchers.status`, e.g. "Approved" — the last column of the register
-  row), coloured green for approve/paid/release, red for reject/cancel, amber
+  (`payment_vouchers.status`); once the voucher carries a UTR the badge reads
+  **"Paid via NEFT"** (its payment mode) — the wording the register itself uses —
+  coloured green for approve/paid/release, red for reject/cancel, amber
   otherwise; the bill's own StatusBadge is shown only when no voucher exists yet.
 - The **Amount (₹)** column shows the ERP Payments Register voucher amount
   (`payment_vouchers.amount`, i.e. what the voucher's Edit/Delete/Reschedule view

@@ -211,6 +211,9 @@ def map_bill(src: dict, vendor: dict) -> dict:
         "gst_rate": gst_rate,
         "gst_amount": gst_amount,
         "tds_amount": tds_amount,
+        # Vendor Bill Process -> "Other Deductions / Penalties" and previous advance, verbatim
+        "other_deductions": _num(src.get("otherDeductions")),
+        "previous_advance_note": str(src.get("previousAdvance") or "").strip(),
         "total_amount": round(basic + gst_amount - tds_amount - deductions, 2),
         "status": status,
         # exact wording from the workflow portal, shown verbatim in the UI/PDF

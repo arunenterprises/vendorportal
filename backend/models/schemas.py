@@ -271,6 +271,9 @@ class Bill(BaseModel):
     gst_tds_check: str = ""
     wo_rate_status: str = ""
     process_date: str = ""
+    # Vendor Bill Process: "Other Deductions / Penalties" + previous advance text
+    other_deductions: float = 0.0
+    previous_advance_note: str = ""
     # Accounts -> Vendor Bill Process timeline (upstream, verbatim)
     filling_date: str = ""
     submitted_at: str = ""

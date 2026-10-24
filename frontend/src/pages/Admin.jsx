@@ -710,24 +710,27 @@ function AdminInner() {
               </Button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm table-fixed min-w-[1080px]" data-testid="admin-bills-table">
+              <table className="w-full text-sm table-fixed min-w-[1140px]" data-testid="admin-bills-table">
                 <colgroup>
+                  <col className="w-[10%]" />
                   <col className="w-[11%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[11%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
                   <col className="w-[9%]" />
-                  <col className="w-[11%]" />
-                  <col className="w-[9%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[16%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[8%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[13%]" />
                   <col className="w-[9%]" />
                 </colgroup>
                 <thead className="bg-slate-50 text-slate-500">
                   <tr className="text-left">
-                    {["Bill Ref No", "Vendor", "Bill No", "Amount (₹)", "GPV / PV No", "Payment Date", "UTR No", "Current Status", "Due Date"].map((h) => (
+                    {["Bill Ref No", "Vendor", "Bill No", "Advance / Deductions", "Amount (₹)", "GPV / PV No", "Payment Date", "UTR No", "Current Status", "Due Date"].map((h) => (
                       <th
                         key={h}
-                        className={`px-3 py-3 font-semibold text-[11px] uppercase tracking-wide ${h === "Amount (₹)" ? "text-right" : ""}`}
+                        className={`px-3 py-3 font-semibold text-[11px] uppercase tracking-wide ${
+                          h === "Amount (₹)" || h === "Advance / Deductions" ? "text-right" : ""
+                        }`}
                       >
                         {h}
                       </th>
@@ -736,7 +739,7 @@ function AdminInner() {
                 </thead>
                 <tbody>
                   {filteredBills.length === 0 && (
-                    <tr><td colSpan={9} className="px-5 py-14 text-center text-slate-400" data-testid="admin-bills-empty">{t("no_data")}</td></tr>
+                    <tr><td colSpan={10} className="px-5 py-14 text-center text-slate-400" data-testid="admin-bills-empty">{t("no_data")}</td></tr>
                   )}
                   {filteredBills.map((b) => {
                     const pv = registerRows.find((p) => p.bill_ref_no === b.invoice_no) || {};
@@ -745,6 +748,17 @@ function AdminInner() {
                         <td className="px-3 py-3 font-mono text-[11px] font-semibold text-slate-900 truncate" title={b.invoice_no}>{b.invoice_no}</td>
                         <td className="px-3 py-3 text-slate-700 truncate" title={b.vendor_name}>{b.vendor_name}</td>
                         <td className="px-3 py-3 font-mono text-[11px] text-slate-500 truncate" title={b.bill_no}>{b.bill_no || "—"}</td>
+                        <td className="px-3 py-3 text-right whitespace-nowrap" data-testid={`admin-bill-advance-${b.invoice_no}`}>
+                          {/* Vendor Bill Process -> Other Deductions / Penalties */}
+                          <span className={b.other_deductions ? "font-semibold text-amber-700" : "text-slate-400"}>
+                            {b.other_deductions ? formatINR(b.other_deductions) : "—"}
+                          </span>
+                          {b.previous_advance_note && b.previous_advance_note !== "0" ? (
+                            <span className="block text-[10px] text-slate-400 truncate" title={b.previous_advance_note}>
+                              {b.previous_advance_note}
+                            </span>
+                          ) : null}
+                        </td>
                         <td className="px-3 py-3 text-right whitespace-nowrap" data-testid={`admin-bill-amount-${b.invoice_no}`}>
                           {/* Amount as shown in the ERP Payments Register voucher; falls back to the bill total until a voucher exists */}
                           <span className="font-semibold text-slate-900">
@@ -763,7 +777,7 @@ function AdminInner() {
                           {/* Status exactly as the ERP Payments Register voucher shows it; bill status only until a voucher exists */}
                           {pv.status ? (
                             <span
-                              title={pv.status}
+                              title={pv.utr_no ? `Paid via ${pv.mode || "NEFT"} · ${pv.status}` : pv.status}
                               className={`inline-flex max-w-full items-center truncate rounded-full px-2 py-1 text-[10px] font-semibold ${
                                 /reject|cancel/i.test(pv.status)
                                   ? "bg-red-50 text-red-700"
@@ -772,7 +786,7 @@ function AdminInner() {
                                     : "bg-amber-50 text-amber-800"
                               }`}
                             >
-                              {pv.status}
+                              {pv.utr_no ? `Paid via ${pv.mode || "NEFT"}` : pv.status}
                             </span>
                           ) : (
                             <div className="max-w-full truncate" title={b.status_label || b.status}>

@@ -79,7 +79,7 @@ async def export_bills_xlsx(
 
     headers = [
         "Bill Ref No", "Vendor", "Bill No", "Work Order No", "Filling Date", "Due Date",
-        "Taxable Value", "GST", "TDS", "Invoice Total",
+        "Taxable Value", "GST", "TDS", "Other Deductions / Penalties", "Previous Advance", "Invoice Total",
         "GPV / PV No", "Payment Date", "UTR No", "Payment Mode", "Current Status",
         "Approval Status", "Approval Date",
     ]
@@ -100,16 +100,18 @@ async def export_bills_xlsx(
             b.get("taxable_amount", 0),
             b.get("gst_amount", 0),
             b.get("tds_amount", 0),
+            b.get("other_deductions", 0),
+            b.get("previous_advance_note", ""),
             b.get("total_amount", 0),
             b.get("pv_no", ""),
             b.get("payment_date", ""),
             b.get("utr", ""),
             b.get("payment_mode", ""),
-            b.get("status_label") or b.get("status", ""),
+            (f"Paid via {b.get('payment_mode') or 'NEFT'}" if b.get("utr") else (b.get("status_label") or b.get("status", ""))),
             b.get("approval_status", ""),
             b.get("approval_date", ""),
         ])
-    for i, width in enumerate([16, 26, 20, 20, 13, 13, 14, 12, 10, 14, 20, 13, 24, 16, 28, 22, 13], start=1):
+    for i, width in enumerate([16, 26, 20, 20, 13, 13, 14, 12, 10, 26, 24, 14, 20, 13, 24, 16, 28, 22, 13], start=1):
         ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = width
 
     buf = BytesIO()
