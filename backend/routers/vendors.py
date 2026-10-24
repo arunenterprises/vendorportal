@@ -6,7 +6,7 @@ workflow portal by lib/arun.py (primary key: vendorCode).
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from lib.auth import current_user
+from lib.auth import current_user, sees_all
 from lib.db import db
 from models.schemas import Summary, Vendor
 
@@ -14,15 +14,15 @@ router = APIRouter(tags=["vendors"])
 
 
 async def vendor_scope(user) -> dict:
-    """Mongo filter restricting a vendor user to its own rows; admin sees all."""
-    if user.get("role") == "admin":
+    """Mongo filter restricting a vendor user to its own rows; admin/staff see all."""
+    if sees_all(user):
         return {}
     return {"vendor_id": user.get("vendor_id")}
 
 
 @router.get("/vendors", response_model=list[Vendor])
 async def list_vendors(user=Depends(current_user)):
-    q = {} if user.get("role") == "admin" else {"id": user.get("vendor_id")}
+    q = {} if sees_all(user) else {"id": user.get("vendor_id")}
     docs = await db.vendors.find(q, {"_id": 0}).sort("company_name", 1).to_list(500)
     return [Vendor(**d) for d in docs]
 
@@ -64,7 +64,7 @@ async def summary(user=Depends(current_user)):
         active_orders=len([o for o in orders if o.get("status") == "active"]),
         total_bills=len(bills),
         vendors_count=await db.vendors.count_documents(
-            {} if user.get("role") == "admin" else {"id": user.get("vendor_id")}
+            {} if sees_all(user) else {"id": user.get("vendor_id")}
         ),
         current_bill_amount=round(current.get("total_amount", 0) or 0, 2),
         current_bill_no=str(current.get("bill_no") or current.get("invoice_no") or ""),

@@ -57,7 +57,21 @@ async def current_user(vp_session: str | None = Cookie(default=None)):
 
 
 async def admin_user(user=None, vp_session: str | None = Cookie(default=None)):
+    """Only a role that may CHANGE things in this portal."""
     user = await current_user(vp_session)
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
+
+async def staff_user(user=None, vp_session: str | None = Cookie(default=None)):
+    """Admin or staff: sees every vendor's data, but staff may not change anything."""
+    user = await current_user(vp_session)
+    if user.get("role") not in ("admin", "staff"):
+        raise HTTPException(status_code=403, detail="Staff access required")
+    return user
+
+
+def sees_all(user: dict) -> bool:
+    """Roles whose reads are NOT scoped to a single vendor."""
+    return user.get("role") in ("admin", "staff")

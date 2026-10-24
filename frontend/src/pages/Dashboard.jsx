@@ -102,7 +102,7 @@ function DashboardInner() {
         user?.role === "vendor"
           ? [vendorQ.data?.company_name || user?.name, vendorQ.data?.code].filter(Boolean).join(" · ")
           : user
-            ? `${user.name} · ${t("role_admin")}`
+            ? `${user.name} · ${user.role === "staff" ? "Staff (view only)" : t("role_admin")}`
             : ""
       }
     >
@@ -115,15 +115,16 @@ function DashboardInner() {
               tile.dark ? "bg-[#0B132B] border-[#0B132B]" : "bg-white border-slate-200"
             }`}
           >
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center justify-between gap-2 min-w-0">
               <p
-                className={`text-[11px] uppercase tracking-[0.12em] font-semibold leading-snug ${
+                className={`text-[11px] uppercase tracking-[0.12em] font-semibold truncate ${
                   tile.dark ? "text-slate-400" : "text-slate-500"
                 }`}
+                title={tile.label}
               >
                 {tile.label}
               </p>
-              <tile.icon size={18} strokeWidth={1.75} className={`shrink-0 ${tile.dark ? "text-blue-400" : "text-slate-400"}`} />
+              <tile.icon size={14} strokeWidth={1.5} className={`shrink-0 ${tile.dark ? "text-blue-400" : "text-slate-400"}`} />
             </div>
             <p className={`text-[26px] font-semibold mt-3 leading-tight ${tile.tone}`} data-testid={`kpi-value-${tile.key}`}>
               {tile.value}

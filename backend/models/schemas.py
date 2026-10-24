@@ -126,6 +126,10 @@ class BulkVisibility(BaseModel):
     live: bool
 
 
+class RoleUpdate(BaseModel):
+    role: str  # admin | staff | vendor
+
+
 class PasswordReset(BaseModel):
     password: str
 

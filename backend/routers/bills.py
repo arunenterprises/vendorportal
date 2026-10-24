@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from lib.auth import admin_user, current_user
+from lib.auth import admin_user, current_user, sees_all, staff_user
 from lib.dates import today_iso
 from lib.db import db
 from lib.pdf import invoice_pdf, payment_advice_pdf
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/bills", tags=["bills"])
 
 @router.get("", response_model=list[Bill])
 async def list_bills(user=Depends(current_user)):
-    q = {} if user.get("role") == "admin" else {"vendor_id": user.get("vendor_id")}
+    q = {} if sees_all(user) else {"vendor_id": user.get("vendor_id")}
     docs = await db.bills.find(q, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return [Bill(**d) for d in docs]
 
@@ -29,7 +29,7 @@ async def list_bills(user=Depends(current_user)):
 @router.get("/changes")
 async def bill_changes(user=Depends(current_user)):
     """What changed on the workflow portal recently — newest first."""
-    q = {} if user.get("role") == "admin" else {"vendor_id": user.get("vendor_id")}
+    q = {} if sees_all(user) else {"vendor_id": user.get("vendor_id")}
     rows = await db.bill_changes.find(q, {"_id": 0}).sort("changed_at", -1).to_list(25)
     return rows
 
@@ -42,7 +42,7 @@ async def payments_register(user=Depends(current_user)):
     own: PV/GPV no, bill ref no, bill no, amount, payment date, UTR and status.
     """
     q = {}
-    if user.get("role") != "admin":
+    if not sees_all(user):
         vendor = await db.vendors.find_one({"id": user.get("vendor_id")}, {"_id": 0, "code": 1})
         q = {"vendor_code": (vendor or {}).get("code", "__none__")}
     rows = await db.payment_vouchers.find(q, {"_id": 0}).sort("payment_date", -1).to_list(500)
@@ -54,9 +54,9 @@ async def export_bills_xlsx(
     status: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
-    user=Depends(admin_user),
+    user=Depends(staff_user),
 ):
-    """Admin-only: bills + payment details as an Excel sheet (optional filters)."""
+    """Admin/staff: bills + payment details as an Excel sheet (optional filters)."""
     from io import BytesIO
 
     from openpyxl import Workbook
@@ -165,7 +165,7 @@ async def get_bill(bill_id: str, user=Depends(current_user)):
     doc = await db.bills.find_one({"id": bill_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Bill not found")
-    if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
+    if not sees_all(user) and doc["vendor_id"] != user.get("vendor_id"):
         raise HTTPException(status_code=403, detail="Not allowed")
     return Bill(**doc)
 
@@ -176,7 +176,7 @@ async def download_payment_advice(bill_id: str, user=Depends(current_user)):
     doc = await db.bills.find_one({"id": bill_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Bill not found")
-    if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
+    if not sees_all(user) and doc["vendor_id"] != user.get("vendor_id"):
         raise HTTPException(status_code=403, detail="Not allowed")
     if not (doc.get("utr") or doc.get("pv_no")):
         raise HTTPException(status_code=400, detail="Payment not released yet for this invoice")
@@ -192,7 +192,7 @@ async def download_bill(bill_id: str, user=Depends(current_user)):
     doc = await db.bills.find_one({"id": bill_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Bill not found")
-    if user.get("role") != "admin" and doc["vendor_id"] != user.get("vendor_id"):
+    if not sees_all(user) and doc["vendor_id"] != user.get("vendor_id"):
         raise HTTPException(status_code=403, detail="Not allowed")
     vendor = await db.vendors.find_one({"id": doc["vendor_id"]}, {"_id": 0}) or {}
     pdf = invoice_pdf(doc, vendor)

@@ -8,11 +8,14 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from lib.auth import admin_user, hash_password
+from lib.auth import admin_user, hash_password, staff_user
 from lib.db import db
-from models.schemas import PasswordReset, PortalUserCreate, UserRow
+from models.schemas import PasswordReset, PortalUserCreate, RoleUpdate, UserRow
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+# admin = may change anything · staff = non-admin, sees everything read-only · vendor = own data
+ROLES = ("admin", "staff", "vendor")
 
 
 async def _row(user: dict) -> UserRow:
@@ -32,7 +35,7 @@ async def _row(user: dict) -> UserRow:
 
 
 @router.get("", response_model=list[UserRow])
-async def list_users(user=Depends(admin_user)):
+async def list_users(user=Depends(staff_user)):
     docs = await db.users.find({}, {"_id": 0}).sort("role", 1).to_list(500)
     return [await _row(d) for d in docs]
 
@@ -44,8 +47,8 @@ async def create_user(payload: PortalUserCreate, user=Depends(admin_user)):
         raise HTTPException(status_code=400, detail="Email is required")
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="A user with this email already exists")
-    if payload.role not in ("admin", "vendor"):
-        raise HTTPException(status_code=400, detail="Role must be admin or vendor")
+    if payload.role not in ROLES:
+        raise HTTPException(status_code=400, detail="Role must be admin, staff or vendor")
 
     vendor_id = None
     password = (payload.password or "").strip()
@@ -83,6 +86,27 @@ async def create_user(payload: PortalUserCreate, user=Depends(admin_user)):
     }
     await db.users.insert_one(dict(doc))
     return await _row(doc)
+
+
+@router.patch("/{user_id}/role", response_model=UserRow)
+async def change_role(user_id: str, payload: RoleUpdate, user=Depends(admin_user)):
+    """Admin-only: move a portal user between admin / staff / vendor."""
+    if payload.role not in ROLES:
+        raise HTTPException(status_code=400, detail="Role must be admin, staff or vendor")
+    if user_id == user["id"]:
+        raise HTTPException(status_code=400, detail="You cannot change your own role")
+    target = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if payload.role == "vendor" and not target.get("vendor_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="This login is not linked to a vendor, so it cannot become a vendor user",
+        )
+    await db.users.update_one({"id": user_id}, {"$set": {"role": payload.role}})
+    await db.sessions.delete_many({"user_id": user_id})  # the new role must apply immediately
+    target["role"] = payload.role
+    return await _row(target)
 
 
 @router.patch("/{user_id}/password", response_model=UserRow)

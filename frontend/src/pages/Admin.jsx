@@ -25,12 +25,13 @@ import WorkOrderCopyUpload from "@/components/WorkOrderCopyUpload";
 import { downloadFile } from "@/lib/download";
 
 const EMPTY_USER = { email: "", name: "", role: "vendor", vendor_code: "", password: "" };
-const ROLE_LABELS = { vendor: "Vendor", admin: "Administrator" };
+const ROLE_LABELS = { vendor: "Vendor", staff: "Staff (view only)", admin: "Administrator" };
 
 function AdminInner() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { user: me } = useAuth();
+  const isAdmin = me?.role === "admin";  // staff may view everything but change nothing
   const qc = useQueryClient();
   const [userOpen, setUserOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_USER);
@@ -131,6 +132,15 @@ function AdminInner() {
     onError: (e) => toast.error(e?.body?.detail || "Could not delete user"),
   });
 
+  const changeRole = useMutation({
+    mutationFn: ({ id, role }) => apiPatch(`/users/${id}/role`, { role }),
+    onSuccess: (u) => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      toast.success(`${u.email} is now ${ROLE_LABELS[u.role] ?? u.role}`);
+    },
+    onError: (e) => toast.error(e?.body?.detail || "Could not change role"),
+  });
+
   function submitUser(e) {
     e.preventDefault();
     if (!form.email.trim()) {
@@ -141,7 +151,7 @@ function AdminInner() {
       toast.error(t("vendor_code_required"));
       return;
     }
-    if (form.role === "admin" && !form.password.trim()) {
+    if (form.role !== "vendor" && !form.password.trim()) {
       toast.error(t("password_required_admin"));
       return;
     }
@@ -161,6 +171,7 @@ function AdminInner() {
       title={t("nav_admin")}
       subtitle={t("admin_subtitle")}
       action={
+        isAdmin ? (
         <Button
           onClick={() => runSync.mutate()}
           disabled={runSync.isPending}
@@ -170,6 +181,7 @@ function AdminInner() {
           <RefreshCw size={15} className={runSync.isPending ? "animate-spin" : ""} />
           {runSync.isPending ? t("syncing") : t("sync_arun")}
         </Button>
+        ) : null
       }
     >
       {/* linked-records banner */}
@@ -205,6 +217,7 @@ function AdminInner() {
                 <p className="text-xs text-slate-500 mt-0.5">{t("users_note")}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {isAdmin ? (
                 <Dialog open={userOpen} onOpenChange={setUserOpen}>
                 <DialogTrigger
                   render={
@@ -227,9 +240,13 @@ function AdminInner() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="vendor" data-testid="admin-user-role-vendor">Vendor</SelectItem>
+                          <SelectItem value="staff" data-testid="admin-user-role-staff">Staff (view only)</SelectItem>
                           <SelectItem value="admin" data-testid="admin-user-role-admin">Administrator</SelectItem>
                         </SelectContent>
                       </Select>
+                      <p className="text-[11px] text-slate-500">
+                        Only an Administrator can change data in this portal. Staff can see everything but cannot edit.
+                      </p>
                     </div>
 
                     {form.role === "vendor" && (
@@ -308,6 +325,7 @@ function AdminInner() {
                   </form>
                 </DialogContent>
               </Dialog>
+                ) : null}
               </div>
             </div>
 
@@ -340,12 +358,28 @@ function AdminInner() {
                       <td className="px-4 py-3.5">
                         <Badge variant="outline" className={u.role === "admin"
                           ? "bg-blue-50 text-blue-800 border-blue-200"
-                          : "bg-slate-100 text-slate-700 border-slate-300"}>
+                          : u.role === "staff"
+                            ? "bg-amber-50 text-amber-800 border-amber-200"
+                            : "bg-slate-100 text-slate-700 border-slate-300"}>
                           {ROLE_LABELS[u.role] ?? u.role}
                         </Badge>
+                        {isAdmin && u.id !== me?.id ? (
+                          <select
+                            value={u.role}
+                            onChange={(e) => changeRole.mutate({ id: u.id, role: e.target.value })}
+                            data-testid={`admin-user-role-change-${u.email}`}
+                            className="mt-1.5 block w-full text-[11px] border border-slate-200 rounded-md px-1.5 py-1
+                              bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1D4ED8]"
+                          >
+                            <option value="admin">Administrator</option>
+                            <option value="staff">Staff (view only)</option>
+                            {u.vendor_code ? <option value="vendor">Vendor</option> : null}
+                          </select>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3.5 font-mono text-xs text-[#1D4ED8]">{u.vendor_code || "—"}</td>
                       <td className="px-4 py-3.5">
+                        {isAdmin ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -355,9 +389,11 @@ function AdminInner() {
                         >
                           <KeyRound size={13} /> Update Password
                         </Button>
+                        ) : <span className="text-xs text-slate-400">—</span>}
                       </td>
                       <td className="px-4 py-3.5">
                         <div className="flex gap-1.5">
+                          {isAdmin ? (
                           <Button
                             size="sm"
                             variant="outline"
@@ -367,6 +403,7 @@ function AdminInner() {
                           >
                             <Trash2 size={13} />
                           </Button>
+                          ) : <span className="text-xs text-slate-400">—</span>}
                         </div>
                       </td>
                     </tr>
@@ -540,7 +577,7 @@ function AdminInner() {
         </TabsContent>
 
         <TabsContent value="orders">
-          <WorkOrderCopyUpload />
+          {isAdmin ? <WorkOrderCopyUpload /> : null}
           <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-200">
               <h2 className="text-base font-semibold text-slate-900">{t("nav_work_orders")}</h2>
@@ -570,6 +607,7 @@ function AdminInner() {
                       <td className="px-5 py-3.5 whitespace-nowrap font-medium">{formatINR(o.value)}</td>
                       <td className="px-5 py-3.5"><StatusBadge status={o.status} /></td>
                       <td className="px-5 py-3.5">
+                        {isAdmin ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -584,6 +622,7 @@ function AdminInner() {
                           {o.live === false ? <EyeOff size={13} /> : <Eye size={13} />}
                           {o.live === false ? "Off-Air" : "Live"}
                         </Button>
+                        ) : <span className="text-xs text-slate-400">—</span>}
                       </td>
                     </tr>
                   ))}

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 
 from lib.arun import ArunPortalError, sync_from_arun
-from lib.auth import admin_user, current_user
+from lib.auth import admin_user, current_user, staff_user
 from lib.db import db
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ async def auto_sync(user=Depends(current_user)):
 
 
 @router.get("/runs")
-async def sync_runs(user=Depends(admin_user)):
+async def sync_runs(user=Depends(staff_user)):
     """Last 10 sync runs — counts, skipped bills and new logins."""
     runs = await db.sync_runs.find({}, {"_id": 0}).sort("synced_at", -1).to_list(10)
     return runs

@@ -19,7 +19,7 @@ function navItems(role) {
     { to: "/vendor-profile", key: "nav_profile", icon: Building2, id: "vendor-profile" },
     { to: "/documents", key: "nav_documents", icon: ShieldCheck, id: "documents" },
   ];
-  if (role === "admin") {
+  if (role === "admin" || role === "staff") {
     base.push({ to: "/admin", key: "nav_admin", icon: Sparkles, id: "admin" });
   }
   return base;
@@ -131,7 +131,7 @@ export default function AppLayout({ children, title, subtitle, action }) {
             )}
             <div className="mt-2 flex items-center justify-between gap-2">
               <span className="inline-block text-[11px] px-2 py-0.5 rounded bg-[#16213E] text-blue-300 border border-slate-700">
-                {user.role === "admin" ? t("role_admin") : t("role_vendor")}
+                {user.role === "admin" ? t("role_admin") : user.role === "staff" ? "Staff" : t("role_vendor")}
               </span>
               <Link
                 to="/change-password"

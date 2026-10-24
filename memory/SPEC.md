@@ -299,6 +299,24 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   filters through. (`openpyxl>=3.1.5` added to requirements.txt.)
 - Route is declared BEFORE `/{bill_id}` handlers so the literal path wins.
 
+## Roles (RBAC): admin · staff · vendor
+- `admin` — the ONLY role that may change anything (sync, create/delete users,
+  change roles, reset passwords, bill payment/UTR, work-order status, live
+  toggle, WO copy upload, document download/delete).
+- `staff` — **non-admin, view-only**: sees every vendor's dashboard, vendors,
+  work orders, bills, documents list, sync log and the Excel export, but every
+  mutating route returns 403 and the admin page hides its action controls.
+  Document download/delete stays ADMIN-ONLY (vendor KYC files).
+- `vendor` — own records only (unchanged).
+- `lib/auth.py`: `admin_user` (mutations), `staff_user` (admin|staff reads),
+  `sees_all(user)` used by every read scope in vendors/bills/work_orders/documents
+  instead of the old `role == "admin"` checks.
+- `PATCH /api/users/{id}/role` {role} — admin only; 400 on an unknown role, on
+  changing your own role, or on staff→vendor without a linked vendor; 404 unknown
+  user. The target's sessions are dropped so the new role applies immediately.
+- UI: Create User has a Staff (view only) option; each user row has a role
+  dropdown (admin only, not on your own row); sidebar badge shows "Staff".
+
 ## Payment Advice PDF
 - `GET /api/bills/{id}/payment-advice` -> branded A4 PDF (lib/pdf.py `payment_advice_pdf`): PV No., UTR/Ref, payment date & mode, voucher status, invoice no/date, PO number, Paid To block (company, vendor code, bank, IFSC, account no, GSTIN), payment summary with taxable/GST/TDS/amount paid and the approver name.
 - Access: own vendor or admin (403 cross-vendor); 400 when no UTR/PV exists yet; 404 unknown bill.
