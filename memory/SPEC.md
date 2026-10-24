@@ -251,6 +251,10 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   `approved_by`. Vouchers the register no longer has are deleted each sync.
 - `GET /api/bills/payments-register` — admin sees all, a vendor only its own
   `vendor_code` rows, 401 unauthenticated.
+- The **Current Status** column likewise shows the voucher's own status verbatim
+  (`payment_vouchers.status`, e.g. "Approved" — the last column of the register
+  row), coloured green for approve/paid/release, red for reject/cancel, amber
+  otherwise; the bill's own StatusBadge is shown only when no voucher exists yet.
 - The **Amount (₹)** column shows the ERP Payments Register voucher amount
   (`payment_vouchers.amount`, i.e. what the voucher's Edit/Delete/Reschedule view
   shows against its GPV/PN no); the bill's own invoice total is only used as a

@@ -759,10 +759,26 @@ function AdminInner() {
                         <td className="px-3 py-3 font-mono text-[11px] text-[#1D4ED8] truncate" title={pv.pv_no || b.pv_no}>{pv.pv_no || b.pv_no || "—"}</td>
                         <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{pv.payment_date || b.payment_date || "—"}</td>
                         <td className="px-3 py-3 font-mono text-[11px] text-slate-600 truncate" title={pv.utr_no || b.utr}>{pv.utr_no || b.utr || "—"}</td>
-                        <td className="px-3 py-3 overflow-hidden">
-                          <div className="max-w-full truncate" title={b.status_label || b.status}>
-                            <StatusBadge status={b.status} label={b.status_label} />
-                          </div>
+                        <td className="px-3 py-3 overflow-hidden" data-testid={`admin-bill-status-${b.invoice_no}`}>
+                          {/* Status exactly as the ERP Payments Register voucher shows it; bill status only until a voucher exists */}
+                          {pv.status ? (
+                            <span
+                              title={pv.status}
+                              className={`inline-flex max-w-full items-center truncate rounded-full px-2 py-1 text-[10px] font-semibold ${
+                                /reject|cancel/i.test(pv.status)
+                                  ? "bg-red-50 text-red-700"
+                                  : /approve|paid|release/i.test(pv.status)
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "bg-amber-50 text-amber-800"
+                              }`}
+                            >
+                              {pv.status}
+                            </span>
+                          ) : (
+                            <div className="max-w-full truncate" title={b.status_label || b.status}>
+                              <StatusBadge status={b.status} label={b.status_label} />
+                            </div>
+                          )}
                         </td>
                         <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{b.due_date || "—"}</td>
                       </tr>
