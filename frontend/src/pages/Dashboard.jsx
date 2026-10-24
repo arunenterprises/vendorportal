@@ -123,7 +123,7 @@ function DashboardInner() {
               >
                 {tile.label}
               </p>
-              <tile.icon size={17} className={`shrink-0 ${tile.dark ? "text-blue-400" : "text-slate-400"}`} />
+              <tile.icon size={18} strokeWidth={1.75} className={`shrink-0 ${tile.dark ? "text-blue-400" : "text-slate-400"}`} />
             </div>
             <p className={`text-[26px] font-semibold mt-3 leading-tight ${tile.tone}`} data-testid={`kpi-value-${tile.key}`}>
               {tile.value}

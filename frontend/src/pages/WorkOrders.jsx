@@ -186,15 +186,28 @@ function WorkOrdersInner() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm" data-testid="work-orders-table">
+          <table className="w-full text-sm table-fixed min-w-[1120px]" data-testid="work-orders-table">
+            <colgroup>
+              <col className="w-[13%]" />
+              <col className="w-[20%]" />
+              <col className="w-[10%]" />
+              <col className="w-[8%]" />
+              <col className="w-[9%]" />
+              <col className="w-[14%]" />
+              <col className="w-[12%]" />
+              <col className="w-[14%]" />
+            </colgroup>
             <thead className="bg-slate-50 text-slate-500">
               <tr className="text-left">
                 {["po_number", "title", "value", "progress", "due_date", "status", "actions"].map((h) => (
-                  <th key={h} className="px-5 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
+                  <th
+                    key={h}
+                    className={`px-3 py-3 font-semibold text-[11px] uppercase tracking-wide ${h === "value" ? "text-right" : ""}`}
+                  >
                     {t(h)}
                   </th>
                 ))}
-                <th className="px-5 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
+                <th className="px-3 py-3 font-semibold text-[11px] uppercase tracking-wide">
                   Billed / Balance
                 </th>
               </tr>
@@ -217,7 +230,7 @@ function WorkOrdersInner() {
                     className="border-t border-slate-100 hover:bg-slate-50/70 [transition:background-color_.18s_ease]"
                     data-testid={`work-order-row-${o.po_number}`}
                   >
-                    <td className="px-5 py-3.5">
+                    <td className="px-3 py-3 align-top">
                       <Link
                         to={`/work-orders/${o.id}`}
                         className="font-mono text-xs text-[#1D4ED8] font-semibold hover:underline"
@@ -246,15 +259,15 @@ function WorkOrdersInner() {
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-5 py-3.5 max-w-[320px]">
-                      <p className="text-slate-900 line-clamp-1">{o.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{o.vendor_name}</p>
+                    <td className="px-3 py-3 align-top overflow-hidden">
+                      <p className="text-slate-900 truncate" title={o.title}>{o.title}</p>
+                      <p className="text-xs text-slate-400 mt-0.5 truncate" title={o.vendor_name}>{o.vendor_name}</p>
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap font-medium text-slate-900">
+                    <td className="px-3 py-3 align-top text-right whitespace-nowrap font-medium text-slate-900">
                       {formatINR(o.value)}
                     </td>
-                    <td className="px-5 py-3.5 min-w-[120px]">
-                      <div className="h-1.5 w-24 bg-slate-100 rounded-full overflow-hidden">
+                    <td className="px-3 py-3 align-top">
+                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-[#1D4ED8] rounded-full [transition:width_.3s_ease]"
                           style={{ width: `${o.stages_total ? Math.round((o.stages_done / o.stages_total) * 100) : pct}%` }}
@@ -264,9 +277,11 @@ function WorkOrdersInner() {
                         {o.stages_total ? `${o.stages_done}/${o.stages_total}` : `${done}/${total}`}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">{o.due_date}</td>
-                    <td className="px-5 py-3.5 min-w-[150px]">
-                      <StatusBadge status={o.status} />
+                    <td className="px-3 py-3 align-top whitespace-nowrap text-slate-600 text-xs">{o.due_date}</td>
+                    <td className="px-3 py-3 align-top overflow-hidden">
+                      <div className="max-w-full truncate" title={o.status_label || o.status}>
+                        <StatusBadge status={o.status} />
+                      </div>
                       {o.wo_auto_status || o.expired ? (
                         <p className="text-[11px] text-slate-600 mt-1" data-testid={`work-order-status-label-${o.po_number}`}>
                           {o.expired ? "WO expired" : o.wo_auto_status}
@@ -277,7 +292,7 @@ function WorkOrdersInner() {
                           value={o.status}
                           onChange={(e) => setStatus.mutate({ id: o.id, status: e.target.value })}
                           data-testid={`work-order-status-select-${o.po_number}`}
-                          className="mt-1.5 text-[11px] border border-slate-200 rounded-md px-1.5 py-1 bg-white text-slate-700
+                          className="mt-1.5 w-full text-[11px] border border-slate-200 rounded-md px-1.5 py-1 bg-white text-slate-700
                             hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-[#1D4ED8]
                             [transition:border-color_.18s_ease]"
                         >
@@ -287,16 +302,16 @@ function WorkOrdersInner() {
                         </select>
                       ) : null}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-3 py-3 align-top">
                       <Button
                         variant="outline"
                         size="sm"
                         data-testid={`download-work-order-${o.po_number}`}
                         onClick={() => downloadFile(`/api/work-orders/${o.id}/po-file`, o.po_file_name || `${o.po_number}.pdf`)}
                         disabled={!o.has_po_file}
-                        className="gap-1.5 whitespace-nowrap"
+                        className="h-8 w-full gap-1.5 px-2 text-xs whitespace-nowrap"
                       >
-                        <Download size={14} /> Work Order
+                        <Download size={13} /> Work Order
                       </Button>
                       {isAdmin ? (
                         <Button
@@ -304,19 +319,19 @@ function WorkOrdersInner() {
                           size="sm"
                           data-testid={`work-order-live-toggle-${o.po_number}`}
                           onClick={() => setLive.mutate({ id: o.id, live: o.live === false })}
-                          className={`mt-1.5 gap-1.5 whitespace-nowrap ${
+                          className={`mt-1.5 h-8 w-full gap-1.5 px-2 text-xs whitespace-nowrap ${
                             o.live === false
                               ? "text-slate-600 border-slate-200"
                               : "text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                           }`}
                         >
-                          {o.live === false ? <EyeOff size={14} /> : <Eye size={14} />}
+                          {o.live === false ? <EyeOff size={13} /> : <Eye size={13} />}
                           {o.live === false ? "Unlive" : "Live"}
                         </Button>
                       ) : null}
                     </td>
-                    <td className="px-5 py-3.5 min-w-[150px]" data-testid={`work-order-bill-match-${o.po_number}`}>
-                      <p className="text-slate-900">{formatINR(o.billed_amount || 0)}</p>
+                    <td className="px-3 py-3 align-top" data-testid={`work-order-bill-match-${o.po_number}`}>
+                      <p className="text-slate-900 whitespace-nowrap">{formatINR(o.billed_amount || 0)}</p>
                       <p className="text-[11px] text-slate-500">
                         {o.bills_count || 0} bill{(o.bills_count || 0) === 1 ? "" : "s"} · Balance{" "}
                         <span className={(o.balance_value || 0) <= 0 ? "text-emerald-700 font-semibold" : "text-amber-700 font-semibold"}>

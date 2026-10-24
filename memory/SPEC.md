@@ -275,6 +275,17 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   Amount (bill no + due date) · Active Work Orders. 3-up grid, each tile has
   `kpi-value-*` / `kpi-meta-*` testids.
 
+## Table layout pass (user: "layout set kijiye")
+- Bills, Work Orders, Documents and the Admin bills table all use a fixed layout
+  (`table-fixed` + colgroup percentages + min-width), compact `px-3 py-3` cells,
+  truncation with `title` tooltips and right-aligned money columns, so no column
+  (Actions / Status / Due Date) is clipped at 1440px.
+- Bills admin payment controls (status select, UTR input, Save) are `w-full`
+  inside the Status cell, so a long UTR no longer widens the row.
+- Dashboard tile icons: size 18, strokeWidth 1.75.
+- Documents: card header carries a document count and a role-aware subtitle;
+  vendor view has no action buttons (admin-only download/delete).
+
 ## Payment Advice PDF
 - `GET /api/bills/{id}/payment-advice` -> branded A4 PDF (lib/pdf.py `payment_advice_pdf`): PV No., UTR/Ref, payment date & mode, voucher status, invoice no/date, PO number, Paid To block (company, vendor code, bank, IFSC, account no, GSTIN), payment summary with taxable/GST/TDS/amount paid and the approver name.
 - Access: own vendor or admin (403 cross-vendor); 400 when no UTR/PV exists yet; 404 unknown bill.

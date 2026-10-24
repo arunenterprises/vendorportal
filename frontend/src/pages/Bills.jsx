@@ -163,15 +163,17 @@ function BillsInner() {
                   <td className="px-3 py-3 text-right whitespace-nowrap font-semibold text-slate-900">
                     {formatINR(b.total_amount)}
                   </td>
-                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                    <StatusBadge status={b.status} label={b.status_label} />
+                  <td className="px-3 py-3 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                    <div className="max-w-full truncate" title={b.status_label || b.status}>
+                      <StatusBadge status={b.status} label={b.status_label} />
+                    </div>
                     {isAdmin ? (
-                      <div className="mt-2 flex flex-col gap-1.5">
+                      <div className="mt-2 flex flex-col gap-1.5 w-full">
                         <select
                           value={draft[b.id]?.status ?? b.status}
                           onChange={(e) => setDraft({ ...draft, [b.id]: { ...(draft[b.id] || { utr: b.utr || "" }), status: e.target.value } })}
                           data-testid={`bill-status-select-${b.invoice_no}`}
-                          className="text-[11px] border border-slate-200 rounded-md px-1.5 py-1 bg-white text-slate-700
+                          className="w-full text-[11px] border border-slate-200 rounded-md px-1.5 py-1 bg-white text-slate-700
                             focus:outline-none focus:ring-1 focus:ring-[#1D4ED8] [transition:border-color_.18s_ease]"
                         >
                           <option value="pending">Pending</option>
@@ -182,9 +184,10 @@ function BillsInner() {
                         <Input
                           value={draft[b.id]?.utr ?? b.utr ?? ""}
                           onChange={(e) => setDraft({ ...draft, [b.id]: { ...(draft[b.id] || { status: b.status }), utr: e.target.value } })}
-                          placeholder="UTR / reference no."
+                          placeholder="UTR no."
+                          title={draft[b.id]?.utr ?? b.utr ?? ""}
                           data-testid={`bill-utr-input-${b.invoice_no}`}
-                          className="h-7 text-[11px]"
+                          className="h-7 w-full min-w-0 text-[11px] font-mono px-2 text-ellipsis"
                         />
                         <Button
                           size="sm"
@@ -197,14 +200,14 @@ function BillsInner() {
                               utr: draft[b.id]?.utr ?? b.utr ?? "",
                             })
                           }
-                          className="h-7 gap-1.5 text-[11px] bg-[#1D4ED8] hover:bg-[#1E40AF] text-white
+                          className="h-7 w-full gap-1.5 text-[11px] bg-[#1D4ED8] hover:bg-[#1E40AF] text-white
                             active:scale-[0.98] [transition:background-color_.18s_ease,transform_.1s_ease]"
                         >
                           <Save size={12} /> Save
                         </Button>
                       </div>
                     ) : b.utr ? (
-                      <p className="text-[11px] text-slate-500 mt-1 font-mono">{b.utr}</p>
+                      <p className="text-[11px] text-slate-500 mt-1 font-mono truncate" title={b.utr}>{b.utr}</p>
                     ) : null}
                   </td>
                   <td className="px-3 py-3">
