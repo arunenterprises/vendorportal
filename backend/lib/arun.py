@@ -211,6 +211,10 @@ def map_bill(src: dict, vendor: dict) -> dict:
         "gst_rate": gst_rate,
         "gst_amount": gst_amount,
         "tds_amount": tds_amount,
+        # gross bill amount (basic + GST, before TDS and deductions)
+        "gross_amount": round(basic + gst_amount, 2),
+        # bill value BEFORE deductions (deductions are shown in their own column)
+        "bill_value": round(basic + gst_amount - tds_amount, 2),
         # Vendor Bill Process -> "Other Deductions / Penalties" and previous advance, verbatim
         "other_deductions": _num(src.get("otherDeductions")),
         "previous_advance_note": str(src.get("previousAdvance") or "").strip(),

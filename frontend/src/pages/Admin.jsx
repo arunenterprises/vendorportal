@@ -638,7 +638,7 @@ function AdminInner() {
               <div>
                 <h2 className="text-base font-semibold text-slate-900">{t("nav_bills")}</h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Bill details with their Payments Register voucher (GPV / PV no, payment date, UTR) in one view.
+                  Bill details with their Payments Register voucher (gross amount, deductions, paid amount, GPV / PV no, UTR) in one view.
                 </p>
               </div>
               <span className="text-xs font-semibold text-slate-500" data-testid="admin-register-count">
@@ -710,45 +710,63 @@ function AdminInner() {
               </Button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm table-fixed min-w-[1140px]" data-testid="admin-bills-table">
+              <table className="w-full text-sm table-fixed min-w-[1080px]" data-testid="admin-bills-table">
                 <colgroup>
                   <col className="w-[10%]" />
                   <col className="w-[11%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[10%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[7%]" />
                   <col className="w-[9%]" />
                   <col className="w-[10%]" />
                   <col className="w-[8%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[9%]" />
                 </colgroup>
                 <thead className="bg-slate-50 text-slate-500">
                   <tr className="text-left">
-                    {["Bill Ref No", "Vendor", "Bill No", "Advance / Deductions", "Amount (₹)", "GPV / PV No", "Payment Date", "UTR No", "Current Status", "Due Date"].map((h) => (
+                    {[
+                      { label: "Bill Ref No", title: "Bill reference no" },
+                      { label: "Vendor", title: "Vendor" },
+                      { label: "Bill No", title: "Vendor's bill no" },
+                      { label: "Gross Amt", title: "Gross Bill Amount (basic + GST)", right: true },
+                      { label: "Adv / Ded", title: "Advance / Other Deductions & Penalties", right: true },
+                      { label: "Paid Amt", title: "Amount as per the Payments Register voucher", right: true },
+                      { label: "GPV / PV No", title: "Payment voucher no" },
+                      { label: "Pay Date", title: "Payment date" },
+                      { label: "UTR No", title: "UTR / reference no" },
+                      { label: "Status", title: "Current status" },
+                      { label: "Due Date", title: "Due date" },
+                    ].map((h) => (
                       <th
-                        key={h}
-                        className={`px-3 py-3 font-semibold text-[11px] uppercase tracking-wide ${
-                          h === "Amount (₹)" || h === "Advance / Deductions" ? "text-right" : ""
+                        key={h.label}
+                        title={h.title}
+                        className={`px-2.5 py-3 font-semibold text-[10px] uppercase tracking-wide whitespace-nowrap ${
+                          h.right ? "text-right" : ""
                         }`}
                       >
-                        {h}
+                        {h.label}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredBills.length === 0 && (
-                    <tr><td colSpan={10} className="px-5 py-14 text-center text-slate-400" data-testid="admin-bills-empty">{t("no_data")}</td></tr>
+                    <tr><td colSpan={11} className="px-5 py-14 text-center text-slate-400" data-testid="admin-bills-empty">{t("no_data")}</td></tr>
                   )}
                   {filteredBills.map((b) => {
                     const pv = registerRows.find((p) => p.bill_ref_no === b.invoice_no) || {};
                     return (
                       <tr key={b.id} className="border-t border-slate-100 align-middle hover:bg-slate-50/70 [transition:background-color_.18s_ease]" data-testid={`admin-bill-row-${b.invoice_no}`}>
-                        <td className="px-3 py-3 font-mono text-[11px] font-semibold text-slate-900 truncate" title={b.invoice_no}>{b.invoice_no}</td>
-                        <td className="px-3 py-3 text-slate-700 truncate" title={b.vendor_name}>{b.vendor_name}</td>
-                        <td className="px-3 py-3 font-mono text-[11px] text-slate-500 truncate" title={b.bill_no}>{b.bill_no || "—"}</td>
-                        <td className="px-3 py-3 text-right whitespace-nowrap" data-testid={`admin-bill-advance-${b.invoice_no}`}>
+                        <td className="px-2.5 py-3 font-mono text-[11px] font-semibold text-slate-900 truncate" title={b.invoice_no}>{b.invoice_no}</td>
+                        <td className="px-2.5 py-3 text-slate-700 truncate" title={b.vendor_name}>{b.vendor_name}</td>
+                        <td className="px-2.5 py-3 font-mono text-[11px] text-slate-500 truncate" title={b.bill_no}>{b.bill_no || "—"}</td>
+                        <td className="px-2.5 py-3 text-right whitespace-nowrap font-semibold text-slate-900" data-testid={`admin-bill-value-${b.invoice_no}`}>
+                          {/* gross bill amount from Vendor Bill Process: basic + GST */}
+                          {formatINR(b.gross_amount || b.bill_value || b.total_amount)}
+                        </td>
+                        <td className="px-2.5 py-3 text-right whitespace-nowrap" data-testid={`admin-bill-advance-${b.invoice_no}`}>
                           {/* Vendor Bill Process -> Other Deductions / Penalties */}
                           <span className={b.other_deductions ? "font-semibold text-amber-700" : "text-slate-400"}>
                             {b.other_deductions ? formatINR(b.other_deductions) : "—"}
@@ -759,21 +777,16 @@ function AdminInner() {
                             </span>
                           ) : null}
                         </td>
-                        <td className="px-3 py-3 text-right whitespace-nowrap" data-testid={`admin-bill-amount-${b.invoice_no}`}>
+                        <td className="px-2.5 py-3 text-right whitespace-nowrap" data-testid={`admin-bill-amount-${b.invoice_no}`}>
                           {/* Amount as shown in the ERP Payments Register voucher; falls back to the bill total until a voucher exists */}
                           <span className="font-semibold text-slate-900">
                             {formatINR(pv.amount != null ? pv.amount : b.total_amount)}
                           </span>
-                          {pv.amount != null && Math.round((pv.amount - (b.total_amount || 0)) * 100) !== 0 ? (
-                            <span className="block text-[10px] text-slate-400" title="Invoice total on the bill">
-                              {`bill ${formatINR(b.total_amount)}`}
-                            </span>
-                          ) : null}
                         </td>
-                        <td className="px-3 py-3 font-mono text-[11px] text-[#1D4ED8] truncate" title={pv.pv_no || b.pv_no}>{pv.pv_no || b.pv_no || "—"}</td>
-                        <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{pv.payment_date || b.payment_date || "—"}</td>
-                        <td className="px-3 py-3 font-mono text-[11px] text-slate-600 truncate" title={pv.utr_no || b.utr}>{pv.utr_no || b.utr || "—"}</td>
-                        <td className="px-3 py-3 overflow-hidden" data-testid={`admin-bill-status-${b.invoice_no}`}>
+                        <td className="px-2.5 py-3 font-mono text-[11px] text-[#1D4ED8] truncate" title={pv.pv_no || b.pv_no}>{pv.pv_no || b.pv_no || "—"}</td>
+                        <td className="px-2.5 py-3 text-slate-600 text-xs whitespace-nowrap">{pv.payment_date || b.payment_date || "—"}</td>
+                        <td className="px-2.5 py-3 font-mono text-[11px] text-slate-600 truncate" title={pv.utr_no || b.utr}>{pv.utr_no || b.utr || "—"}</td>
+                        <td className="px-2.5 py-3 overflow-hidden" data-testid={`admin-bill-status-${b.invoice_no}`}>
                           {/* Status exactly as the ERP Payments Register voucher shows it; bill status only until a voucher exists */}
                           {pv.status ? (
                             <span
@@ -794,7 +807,7 @@ function AdminInner() {
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-3 text-slate-600 text-xs whitespace-nowrap">{b.due_date || "—"}</td>
+                        <td className="px-2.5 py-3 text-slate-600 text-xs whitespace-nowrap">{b.due_date || "—"}</td>
                       </tr>
                     );
                   })}

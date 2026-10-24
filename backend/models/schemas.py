@@ -271,6 +271,10 @@ class Bill(BaseModel):
     gst_tds_check: str = ""
     wo_rate_status: str = ""
     process_date: str = ""
+    # bill value before deductions (basic + GST - TDS)
+    bill_value: float = 0.0
+    # gross bill amount (basic + GST)
+    gross_amount: float = 0.0
     # Vendor Bill Process: "Other Deductions / Penalties" + previous advance text
     other_deductions: float = 0.0
     previous_advance_note: str = ""

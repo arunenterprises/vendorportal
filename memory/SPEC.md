@@ -251,6 +251,12 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   `approved_by`. Vouchers the register no longer has are deleted each sync.
 - `GET /api/bills/payments-register` — admin sees all, a vendor only its own
   `vendor_code` rows, 401 unauthenticated.
+- A **Gross Bill Amount** column (upstream basic + GST, before TDS and
+  deductions — `bills.gross_amount`) sits before Advance / Deductions; the
+  Excel export carries Gross Bill Amount and Total Bill Value (basic + GST − TDS)
+  alongside Taxable/GST/TDS. Admin table headers are short and tooltipped
+  (Gross Amt · Adv / Ded · Paid Amt · GPV / PV No · Pay Date · UTR No · Status ·
+  Due Date) with `px-2.5` cells and an 1080px min-width so all 11 columns fit.
 - An **Advance / Deductions** column sits just before Amount and shows the
   Vendor Bill Process field "Other Deductions / Penalties"
   (`bills.other_deductions`, mapped from upstream `otherDeductions`), with the

@@ -79,7 +79,7 @@ async def export_bills_xlsx(
 
     headers = [
         "Bill Ref No", "Vendor", "Bill No", "Work Order No", "Filling Date", "Due Date",
-        "Taxable Value", "GST", "TDS", "Other Deductions / Penalties", "Previous Advance", "Invoice Total",
+        "Taxable Value", "GST", "Gross Bill Amount", "TDS", "Total Bill Value", "Other Deductions / Penalties", "Previous Advance", "Invoice Total",
         "GPV / PV No", "Payment Date", "UTR No", "Payment Mode", "Current Status",
         "Approval Status", "Approval Date",
     ]
@@ -99,7 +99,9 @@ async def export_bills_xlsx(
             b.get("due_date", ""),
             b.get("taxable_amount", 0),
             b.get("gst_amount", 0),
+            b.get("gross_amount", 0),
             b.get("tds_amount", 0),
+            b.get("bill_value", 0),
             b.get("other_deductions", 0),
             b.get("previous_advance_note", ""),
             b.get("total_amount", 0),
@@ -111,7 +113,7 @@ async def export_bills_xlsx(
             b.get("approval_status", ""),
             b.get("approval_date", ""),
         ])
-    for i, width in enumerate([16, 26, 20, 20, 13, 13, 14, 12, 10, 26, 24, 14, 20, 13, 24, 16, 28, 22, 13], start=1):
+    for i, width in enumerate([16, 26, 20, 20, 13, 13, 14, 12, 18, 10, 16, 26, 24, 14, 20, 13, 24, 16, 28, 22, 13], start=1):
         ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = width
 
     buf = BytesIO()
