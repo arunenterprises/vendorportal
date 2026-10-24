@@ -5,7 +5,7 @@ import { apiPost } from "@/lib/api";
 // The workflow portal is the single source of truth. Every page mount asks the
 // backend to re-pull it (server-side throttle keeps that cheap) and refetches the
 // affected queries when anything actually changed.
-const KEYS = ["summary", "vendors", "vendor", "bills", "work-orders", "bill-changes", "sync-status", "sync-runs"];
+const KEYS = ["summary", "vendors", "vendor", "bills", "work-orders", "bill-changes", "sync-status", "sync-runs", "payments-register"];
 let inFlight = null;
 
 export function useAutoSync(enabled = true) {

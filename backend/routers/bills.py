@@ -34,6 +34,21 @@ async def bill_changes(user=Depends(current_user)):
     return rows
 
 
+@router.get("/payments-register")
+async def payments_register(user=Depends(current_user)):
+    """Payments Register mirror (upstream Accounts & Vouchers -> Payment Vouchers / Due List).
+
+    Admin sees every voucher; a vendor sees only its own. Fields are the register's
+    own: PV/GPV no, bill ref no, bill no, amount, payment date, UTR and status.
+    """
+    q = {}
+    if user.get("role") != "admin":
+        vendor = await db.vendors.find_one({"id": user.get("vendor_id")}, {"_id": 0, "code": 1})
+        q = {"vendor_code": (vendor or {}).get("code", "__none__")}
+    rows = await db.payment_vouchers.find(q, {"_id": 0}).sort("payment_date", -1).to_list(500)
+    return rows
+
+
 @router.patch("/{bill_id}/payment", response_model=Bill)
 async def update_payment(bill_id: str, payload: BillPaymentUpdate, user=Depends(admin_user)):
     """Admin-only: set the payment status and UTR of a bill.

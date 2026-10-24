@@ -588,9 +588,30 @@ async def sync_from_arun() -> dict:
 
     # ---- payments register (Reports & Vouchers): current payment status per bill ----
     payments_applied = 0
+    voucher_ids: list[str] = []
     for pv in remote_payments:
         ref = str(pv.get("billRefNo") or "").strip()
-        local = await db.bills.find_one({"invoice_no": ref}, {"_id": 0})
+        # mirror the register verbatim so the admin can read it exactly as upstream shows it
+        voucher = {
+            "id": str(pv.get("id") or f"{pv.get('pvNo')}-{ref}"),
+            "pv_no": str(pv.get("pvNo") or ""),
+            "bill_ref_no": ref,
+            "bill_no": str(pv.get("billNo") or pv.get("sourceRef") or ""),
+            "vendor_code": str(pv.get("vendorCode") or ""),
+            "vendor_name": str(pv.get("vendorName") or (pv.get("vendorSnapshot") or {}).get("firmName") or ""),
+            "amount": _num(pv.get("amount")),
+            "payment_date": str(pv.get("date") or pv.get("pvDate") or pv.get("approvalDate") or ""),
+            "utr_no": str(pv.get("utrNo") or ""),
+            "status": str(pv.get("status") or ""),
+            "mode": str(pv.get("mode") or ""),
+            "source": str(pv.get("source") or ""),
+            "approved_by": str(pv.get("approvedByName") or ""),
+            "synced_at": datetime.now(timezone.utc),
+        }
+        await db.payment_vouchers.update_one({"id": voucher["id"]}, {"$set": voucher}, upsert=True)
+        voucher_ids.append(voucher["id"])
+
+        local = await db.bills.find_one({"invoice_no": ref}, {"_id": 0}) if ref else None
         if not local:
             continue
         # an admin's manual payment entry in this portal wins
@@ -630,13 +651,14 @@ async def sync_from_arun() -> dict:
         await db.bills.update_one({"invoice_no": ref}, {"$set": update})
         payments_applied += 1
 
-    # the workflow portal is the single source of truth: drop anything it no longer has    # (this also clears rows left behind by an older id scheme, which showed up as duplicates)
+    # the workflow portal is the single source of truth: drop anything it no longer has
     removed_wo = await db.work_orders.delete_many(
         {"source": "arun_portal", "id": {"$nin": list(seen_wo_ids)}}
     )
     removed_bills = await db.bills.delete_many(
         {"source": "arun_portal", "invoice_no": {"$nin": list(seen_invoice_nos)}}
     )
+    await db.payment_vouchers.delete_many({"id": {"$nin": voucher_ids}})
 
     result = {
         "vendors": len(vendors_by_code),

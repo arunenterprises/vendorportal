@@ -243,6 +243,20 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - Admin -> Sync Log has a red **Duplicate Codes** column listing them, so the
   duplicate can be cleaned up in the upstream portal.
 
+## Payments Register mirror (Admin → Bills & Invoices)
+- Every sync mirrors the upstream register (`GET /api/payments`, ERP → Accounts &
+  Vouchers → Payment Vouchers & Due List → Payments Register) verbatim into the
+  `payment_vouchers` collection: `pv_no`, `bill_ref_no`, `bill_no`, `vendor_code`,
+  `vendor_name`, `amount`, `payment_date`, `utr_no`, `status`, `mode`, `source`,
+  `approved_by`. Vouchers the register no longer has are deleted each sync.
+- `GET /api/bills/payments-register` — admin sees all, a vendor only its own
+  `vendor_code` rows, 401 unauthenticated.
+- UI: Admin Command Center → Bills & Invoices tab now opens with a **Payments
+  Register** card (GPV/PV No · Bill Ref No · Bill No · Vendor · Amount · Payment
+  Date · UTR No · Current Status; green "Paid · <mode>" once a UTR exists),
+  above the existing read-only bills table.
+- Bills page table has a **Vendor** column (`vendor_name`) next to Invoice No.
+
 ## Payment Advice PDF
 - `GET /api/bills/{id}/payment-advice` -> branded A4 PDF (lib/pdf.py `payment_advice_pdf`): PV No., UTR/Ref, payment date & mode, voucher status, invoice no/date, PO number, Paid To block (company, vendor code, bank, IFSC, account no, GSTIN), payment summary with taxable/GST/TDS/amount paid and the approver name.
 - Access: own vendor or admin (403 cross-vendor); 400 when no UTR/PV exists yet; 404 unknown bill.

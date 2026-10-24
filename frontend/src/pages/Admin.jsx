@@ -42,9 +42,15 @@ function AdminInner() {
   const orders = useQuery({ queryKey: ["work-orders"], queryFn: () => apiGet("/work-orders"), retry: false });
   const syncInfo = useQuery({ queryKey: ["sync-status"], queryFn: () => apiGet("/sync/status"), retry: false });
   const syncRuns = useQuery({ queryKey: ["sync-runs"], queryFn: () => apiGet("/sync/runs"), retry: false });
+  const register = useQuery({
+    queryKey: ["payments-register"],
+    queryFn: () => apiGet("/bills/payments-register"),
+    retry: false,
+  });
 
   const userRows = users.isError ? [] : users.data ?? [];
   const syncRows = syncRuns.isError ? [] : syncRuns.data ?? [];
+  const registerRows = register.isError ? [] : register.data ?? [];
   const vendorRows = vendors.isError ? [] : vendors.data ?? [];
   const billRows = bills.isError ? [] : bills.data ?? [];
   const orderRows = useMemo(() => {
@@ -61,7 +67,7 @@ function AdminInner() {
   const runSync = useMutation({
     mutationFn: () => apiPost("/sync/arun"),
     onSuccess: (r) => {
-      ["vendors", "bills", "work-orders", "summary", "sync-status", "users"].forEach((k) =>
+      ["vendors", "bills", "work-orders", "summary", "sync-status", "users", "payments-register", "sync-runs"].forEach((k) =>
         qc.invalidateQueries({ queryKey: [k] }),
       );
       toast.success(
@@ -573,6 +579,55 @@ function AdminInner() {
         </TabsContent>
 
         <TabsContent value="bills">
+          <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden mb-6" data-testid="admin-payments-register-card">
+            <div className="px-5 py-4 border-b border-slate-200">
+              <h2 className="text-base font-semibold text-slate-900">Payments Register</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Live mirror of the ERP's Accounts &amp; Vouchers → Payment Vouchers &amp; Due List → Payments Register.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" data-testid="admin-payments-register-table">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr className="text-left">
+                    {["GPV / PV No", "Bill Ref No", "Bill No", "Vendor", "Amount", "Payment Date", "UTR No", "Current Status"].map((h) => (
+                      <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {registerRows.length === 0 && (
+                    <tr><td colSpan={8} className="px-5 py-14 text-center text-slate-400" data-testid="admin-payments-register-empty">
+                      {register.isLoading ? t("loading") : t("no_data")}
+                    </td></tr>
+                  )}
+                  {registerRows.map((p) => (
+                    <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50/70 [transition:background-color_.18s_ease]" data-testid={`admin-register-row-${p.pv_no}`}>
+                      <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-900 whitespace-nowrap">{p.pv_no || "—"}</td>
+                      <td className="px-4 py-3.5 font-mono text-xs text-[#1D4ED8] whitespace-nowrap">{p.bill_ref_no || "—"}</td>
+                      <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">{p.bill_no || "—"}</td>
+                      <td className="px-4 py-3.5 text-slate-700 max-w-[200px] truncate">{p.vendor_name || p.vendor_code || "—"}</td>
+                      <td className="px-4 py-3.5 font-semibold text-slate-900 whitespace-nowrap">{formatINR(p.amount)}</td>
+                      <td className="px-4 py-3.5 text-slate-600 whitespace-nowrap">{p.payment_date || "—"}</td>
+                      <td className="px-4 py-3.5 font-mono text-[11px] text-slate-600 whitespace-nowrap">{p.utr_no || "—"}</td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          p.utr_no
+                            ? "bg-emerald-50 text-emerald-700"
+                            : /reject/i.test(p.status || "")
+                              ? "bg-red-50 text-red-700"
+                              : "bg-amber-50 text-amber-700"
+                        }`}>
+                          {p.utr_no ? `Paid${p.mode ? ` · ${p.mode}` : ""}` : p.status || "Pending"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
           <Card className="bg-white border-slate-200 rounded-xl shadow-sm p-0 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-200">
               <h2 className="text-base font-semibold text-slate-900">{t("nav_bills")}</h2>

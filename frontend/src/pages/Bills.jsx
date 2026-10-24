@@ -108,7 +108,7 @@ function BillsInner() {
           <table className="w-full text-sm" data-testid="bills-table">
             <thead className="bg-slate-50 text-slate-500">
               <tr className="text-left">
-                {["invoice_no", "bill_no", "po_number", "invoice_date", "taxable", "gst", "tds", "total", "status", "actions"].map((h) => (
+                {["invoice_no", "vendor", "bill_no", "po_number", "invoice_date", "taxable", "gst", "tds", "total", "status", "actions"].map((h) => (
                   <th key={h} className="px-4 py-3 font-semibold text-xs uppercase tracking-wide whitespace-nowrap">
                     {h === "bill_no" ? "Bill No" : t(h)}
                   </th>
@@ -118,7 +118,7 @@ function BillsInner() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-5 py-14 text-center text-slate-400" data-testid="bills-empty">
+                  <td colSpan={11} className="px-5 py-14 text-center text-slate-400" data-testid="bills-empty">
                     {bills.isLoading ? t("loading") : bills.isError ? t("offline_note") : t("no_data")}
                   </td>
                 </tr>
@@ -132,6 +132,9 @@ function BillsInner() {
                 >
                   <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-900 whitespace-nowrap">
                     {b.invoice_no}
+                  </td>
+                  <td className="px-4 py-3.5 text-slate-700 max-w-[180px] truncate" data-testid={`bill-vendor-${b.invoice_no}`}>
+                    {b.vendor_name || "—"}
                   </td>
                   <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500 whitespace-nowrap">{b.bill_no || "—"}</td>
                   <td className="px-4 py-3.5 font-mono text-xs text-[#1D4ED8] whitespace-nowrap">{b.po_number}</td>
