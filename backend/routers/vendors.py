@@ -64,7 +64,13 @@ async def summary(user=Depends(current_user)):
         reverse=True,
     )
     cleared_bill = paid_bills[0] if paid_bills else {}
-    previous_paid = paid_bills[1] if len(paid_bills) > 1 else {}
+    # "previous bill" = the newest PAID bill that is not the one shown as current,
+    # so a bill moves from Current -> Cleared/Previous on its own once it is paid.
+    current_key = str(current.get("invoice_no") or "")
+    previous_paid = next(
+        (b for b in paid_bills if str(b.get("invoice_no") or "") != current_key),
+        {},
+    )
     # the balance is the CURRENT bill's own unpaid amount — once it is paid it is 0
     balance_bill = current if current.get("status") != "paid" else {}
     balance_amount = 0.0 if current.get("status") == "paid" else _amount(current)
@@ -83,6 +89,7 @@ async def summary(user=Depends(current_user)):
         current_bill_date=str(current.get("filling_date") or current.get("invoice_date") or ""),
         current_bill_status=str(current.get("status_label") or current.get("approval_status") or ""),
         current_bill_submitted=str(current.get("submitted_at") or current.get("filling_date") or ""),
+        current_bill_paid=current.get("status") == "paid",
         approved_bill_amount=round(approved.get("total_amount", 0) or 0, 2),
         approved_bill_no=str(approved.get("bill_no") or approved.get("invoice_no") or ""),
         approved_bill_date=str(approved.get("approval_date") or ""),

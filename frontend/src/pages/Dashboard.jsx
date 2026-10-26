@@ -52,10 +52,12 @@ function STAT_TILES(s) {
       label: "Current Bill & Amount",
       value: s ? formatINR(s.current_bill_amount) : "—",
       meta: s ? billLine(s.current_bill_no, s.current_bill_submitted) : "—",
-      extra: s?.current_bill_status || "",
-      extraTone: "text-blue-800",
-      icon: FileText,
-      tone: "text-slate-900",
+      // once the bill is paid the tile turns green and says so
+      extra: s?.current_bill_paid ? `Paid · ${s.current_bill_status || "Cleared"}` : s?.current_bill_status || "",
+      extraTone: s?.current_bill_paid ? "text-emerald-700" : "text-blue-800",
+      icon: s?.current_bill_paid ? CheckCircle2 : FileText,
+      tone: s?.current_bill_paid ? "text-emerald-700" : "text-slate-900",
+      accent: s?.current_bill_paid ? "border-emerald-200 bg-emerald-50/40" : "",
     },
     {
       key: "balance_bill",

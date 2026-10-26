@@ -334,6 +334,7 @@ class Summary(BaseModel):
     current_bill_no: str = ""
     current_bill_date: str = ""
     current_bill_status: str = ""
+    current_bill_paid: bool = False
     current_bill_submitted: str = ""
     approved_bill_amount: float = 0.0
     approved_bill_no: str = ""
