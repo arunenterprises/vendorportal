@@ -5,7 +5,7 @@ const DICT = {
   app_tagline: { en: "Our Quality Oriented Service's Is First Priority" },
   company_addr: { en: "209H/1F/1, Ops Nagar, Kalindipuram, Prayagraj, UP 211011" },
   toll_free: { en: "Toll Free" },
-  sync_arun: { en: "Sync from Workflow Portal" },
+  sync_arun: { en: "Sync from ERP Portal" },
   syncing: { en: "Syncing…" },
   sync_done: { en: "Synced from Arun workflow portal" },
   sync_failed: { en: "Could not reach the workflow portal" },
