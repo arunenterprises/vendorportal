@@ -14,10 +14,33 @@ mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
-# Logins live in their OWN database so ERP-synced data can never disturb them
-# (AUTH_DB_NAME, default arun_vendor_auth). `auth_db.users` / `auth_db.sessions`
-# are the only source of truth for who may sign in.
-auth_db = client[os.environ.get("AUTH_DB_NAME", "arun_vendor_auth")]
+# Logins live in their OWN database when the Mongo credential is allowed to reach
+# it (AUTH_DB_NAME, default arun_vendor_auth). Managed production clusters often
+# grant access to ONE provisioned database only, so `auth_db` is a thin proxy:
+# lib/bootstrap.py probes it at startup and, when it is not authorized, points it
+# back at the main database. Routers keep importing `auth_db` unchanged.
+class _DbProxy:
+    """Forwards everything to whichever database is currently selected."""
+
+    def __init__(self, target):
+        object.__setattr__(self, "_target", target)
+
+    def use(self, target) -> None:
+        object.__setattr__(self, "_target", target)
+
+    @property
+    def name(self) -> str:
+        return object.__getattribute__(self, "_target").name
+
+    def __getattr__(self, item):
+        return getattr(object.__getattribute__(self, "_target"), item)
+
+    def __getitem__(self, item):
+        return object.__getattribute__(self, "_target")[item]
+
+
+AUTH_DB_NAME = os.environ.get("AUTH_DB_NAME") or os.environ["DB_NAME"]
+auth_db = _DbProxy(client[AUTH_DB_NAME])
 
 logger = logging.getLogger(__name__)
 

@@ -345,14 +345,17 @@ portal grows. Credentials: see `memory/test_credentials.md`.
   dropdown (admin only, not on your own row); sidebar badge shows "Staff".
 
 ## Login bootstrap (Nov 2026) — production 401 fix
-- Logins live in AUTH_DB_NAME (`arun_vendor_auth`). A fresh deployment starts with
-  an EMPTY auth database, so correct credentials returned 401 in production while
-  preview worked (migrate_auth_db.py had only ever been run in preview).
-- `backend/lib/bootstrap.py::ensure_logins()` is now awaited in server.py's
-  lifespan on every boot. Idempotent, never overwrites: copies any login still in
-  the app DB into the auth DB, and creates the owner (ARUN_PORTAL_IDENTIFIER) as
-  SuperAdmin with ARUN_PORTAL_PASSWORD when missing. Vendor logins come back on
-  the first "Sync from Workflow Portal" (lib/arun.py inserts them in auth_db).
+- Logins live in AUTH_DB_NAME (`arun_vendor_auth`) in preview. Managed production
+  Mongo authorizes only the single provisioned database, so reading that second DB
+  raised "not authorized (code 13)" → login 401, and awaiting the bootstrap
+  unguarded crash-looped the pod.
+- `lib/db.py`: `auth_db` is a `_DbProxy` over a Motor database (routers keep
+  `from lib.db import auth_db`); AUTH_DB_NAME falls back to DB_NAME when unset.
+- `lib/bootstrap.py::ensure_logins()` (awaited in server.py lifespan, wrapped in
+  try/except so it can never abort boot): probes the auth DB, on any error calls
+  `auth_db.use(db)` so logins read/write the main database; copies logins still in
+  the app DB; ensures ARUN_PORTAL_IDENTIFIER exists as SuperAdmin
+  (ARUN_PORTAL_PASSWORD when it must be created). Fully idempotent.
 - Production env must carry: MONGO_URL, DB_NAME, AUTH_DB_NAME, ARUN_PORTAL_URL,
   ARUN_PORTAL_IDENTIFIER, ARUN_PORTAL_PASSWORD, WEBHOOK_CRON_SECRET.
 

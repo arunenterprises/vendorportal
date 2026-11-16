@@ -23,7 +23,25 @@ logger = logging.getLogger(__name__)
 OWNER_ID = "u-admin-arun"
 
 
-async def ensure_logins() -> dict:
+async def _resolve_auth_db() -> str:
+    """Fall back to the main database when the auth database is not reachable.
+
+    Managed production Mongo often authorizes a single provisioned database, so
+    reading `arun_vendor_auth` raises 'not authorized'. In that case every login
+    already lives in the main database — point `auth_db` there instead of
+    crashing the whole backend.
+    """
+    try:
+        await auth_db.users.count_documents({})
+        return auth_db.name
+    except Exception as exc:
+        logger.error("auth database %s unusable (%s) — using %s", auth_db.name, exc, db.name)
+        auth_db.use(db)
+        return db.name
+
+
+async def _copy_logins() -> int:
+    """Move logins that still sit in the app database into the auth database."""
     copied = 0
     try:
         for doc in await db.users.find({}, {"_id": 0}).to_list(2000):
@@ -35,6 +53,13 @@ async def ensure_logins() -> dict:
             copied += 1
     except Exception as exc:  # never block boot
         logger.error("ensure_logins(copy): %s", exc)
+    return copied
+
+
+async def ensure_logins() -> dict:
+    await _resolve_auth_db()
+    # when auth and app share one database there is nothing to copy
+    copied = 0 if auth_db.name == db.name else await _copy_logins()
 
     owner_email = os.environ.get("ARUN_PORTAL_IDENTIFIER", "").strip().lower()
     owner_created = False

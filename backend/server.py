@@ -23,7 +23,10 @@ from lib.db import client, db, ensure_indexes
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.index_task = asyncio.create_task(ensure_indexes())  # background: a big index build must not block boot
-    await ensure_logins()  # a fresh deployment must never start with an empty login database
+    try:
+        await ensure_logins()  # a fresh deployment must never start with an empty login database
+    except Exception as exc:  # a login-bootstrap fault must never take the whole API down
+        logging.getLogger(__name__).error("ensure_logins failed: %s", exc)
     yield
     client.close()
 
