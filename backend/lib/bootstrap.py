@@ -15,7 +15,7 @@ Nothing is ever overwritten: an existing login keeps its password and role.
 import logging
 import os
 
-from lib.auth import hash_password
+from lib.auth import hash_password, verify_password
 from lib.db import auth_db, db
 
 logger = logging.getLogger(__name__)
@@ -63,15 +63,22 @@ async def ensure_logins() -> dict:
 
     owner_email = os.environ.get("ARUN_PORTAL_IDENTIFIER", "").strip().lower()
     owner_created = False
+    owner_repaired = False
     try:
         if owner_email:
             owner = await auth_db.users.find_one({"email": owner_email}, {"_id": 0})
             if owner:
+                fix: dict = {}
                 if owner.get("role") != "superadmin":
-                    await auth_db.users.update_one(
-                        {"id": owner["id"]},
-                        {"$set": {"role": "superadmin", "permissions": ["view", "edit", "approve"]}},
-                    )
+                    fix["role"] = "superadmin"
+                    fix["permissions"] = ["view", "edit", "approve"]
+                # the owner must always be able to sign in with the portal password
+                password = os.environ.get("ARUN_PORTAL_PASSWORD", "").strip()
+                if password and not verify_password(password, owner.get("password_hash", "")):
+                    fix["password_hash"] = hash_password(password)
+                    owner_repaired = True
+                if fix:
+                    await auth_db.users.update_one({"id": owner["id"]}, {"$set": fix})
             else:
                 password = os.environ.get("ARUN_PORTAL_PASSWORD", "").strip()
                 if password:
@@ -93,6 +100,12 @@ async def ensure_logins() -> dict:
 
     total = await auth_db.users.count_documents({})
     logger.info(
-        "ensure_logins: copied=%s owner_created=%s auth_users=%s", copied, owner_created, total
+        "ensure_logins: copied=%s owner_created=%s owner_repaired=%s auth_users=%s",
+        copied, owner_created, owner_repaired, total,
     )
-    return {"copied": copied, "owner_created": owner_created, "auth_users": total}
+    return {
+        "copied": copied,
+        "owner_created": owner_created,
+        "owner_repaired": owner_repaired,
+        "auth_users": total,
+    }
