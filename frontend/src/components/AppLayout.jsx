@@ -131,7 +131,7 @@ export default function AppLayout({ children, title, subtitle, action }) {
             )}
             <div className="mt-2 flex items-center justify-between gap-2">
               <span className="inline-block text-[11px] px-2 py-0.5 rounded bg-[#16213E] text-blue-300 border border-slate-700">
-                {user.role === "admin" ? t("role_admin") : user.role === "staff" ? "Staff" : t("role_vendor")}
+                {user.role_label || (user.role === "vendor" ? t("role_vendor") : t("role_admin"))}
               </span>
               <Link
                 to="/change-password"

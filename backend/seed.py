@@ -12,7 +12,7 @@ import asyncio
 
 from lib.arun import ArunPortalError, sync_from_arun
 from lib.auth import hash_password
-from lib.db import db, ensure_indexes
+from lib.db import auth_db, db, ensure_indexes
 
 ADMIN = {
     "id": "u-admin-arun",
@@ -30,7 +30,7 @@ async def main():
         await db[coll].delete_many({})
     await ensure_indexes()
 
-    await db.users.insert_one({
+    await auth_db.users.insert_one({
         "id": ADMIN["id"],
         "email": ADMIN["email"],
         "name": ADMIN["name"],

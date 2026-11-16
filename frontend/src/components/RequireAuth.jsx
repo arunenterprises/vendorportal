@@ -12,6 +12,6 @@ export default function RequireAuth({ children, adminOnly = false }) {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && !["admin", "staff"].includes(user.role)) return <Navigate to="/dashboard" replace />;
+  if (adminOnly && !["superadmin", "admin", "staff"].includes(user.role)) return <Navigate to="/dashboard" replace />;
   return children;
 }

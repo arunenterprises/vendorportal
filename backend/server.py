@@ -2,7 +2,6 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, APIRouter
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
 import os
 import logging
 from pathlib import Path
@@ -81,13 +80,9 @@ api_router.include_router(users_router)
 # Include the router in the main app
 app.include_router(api_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# NOTE: no CORS middleware. The frontend is served from the SAME origin as /api
+# (Vite proxy in development, Nginx reverse-proxy in production), so cross-origin
+# headers are not needed and are deliberately left out.
 
 # Configure logging
 logging.basicConfig(

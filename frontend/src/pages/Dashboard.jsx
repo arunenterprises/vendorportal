@@ -115,7 +115,9 @@ function DashboardInner() {
         user?.role === "vendor"
           ? [vendorQ.data?.company_name || user?.name, vendorQ.data?.code].filter(Boolean).join(" · ")
           : user
-            ? `${user.name} · ${user.role === "staff" ? "Staff (view only)" : t("role_admin")}`
+            ? `${user.name} · ${user.role_label || t("role_admin")}${
+                user.permissions?.length ? ` · ${user.permissions.join(" / ")}` : ""
+              }`
             : ""
       }
     >

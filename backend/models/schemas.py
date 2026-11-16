@@ -33,7 +33,10 @@ class UserOut(BaseModel):
     id: str
     email: str
     name: str
+    mobile: str = ""
     role: str
+    role_label: str = ""
+    permissions: list[str] = []
     vendor_id: Optional[str] = None
 
 
@@ -86,9 +89,12 @@ class PortalUserCreate(BaseModel):
 
     email: str
     name: str = ""
+    mobile: str = ""
     role: str = "vendor"
     vendor_code: Optional[str] = None
     password: Optional[str] = None
+    confirm_password: Optional[str] = None
+    permissions: list[str] = []  # any of: view, edit, approve
 
 
 class WorkOrderStatusUpdate(BaseModel):
@@ -127,7 +133,8 @@ class BulkVisibility(BaseModel):
 
 
 class RoleUpdate(BaseModel):
-    role: str  # admin | staff | vendor
+    role: str  # superadmin | admin | staff | vendor (any spelling)
+    permissions: Optional[list[str]] = None
 
 
 class PasswordReset(BaseModel):
@@ -145,7 +152,10 @@ class UserRow(BaseModel):
     id: str
     email: str
     name: str
+    mobile: str = ""
     role: str
+    role_label: str = ""
+    permissions: list[str] = []
     vendor_id: Optional[str] = None
     vendor_code: str = ""
     vendor_name: str = ""

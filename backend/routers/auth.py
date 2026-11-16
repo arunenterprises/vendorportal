@@ -11,7 +11,8 @@ from lib.auth import (
     hash_password,
     verify_password,
 )
-from lib.db import db
+from lib.db import auth_db, db
+from routers.users import DEFAULT_PERMISSIONS, ROLE_LABELS
 from models.schemas import LoginRequest, PasswordChange, UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -23,7 +24,7 @@ async def _resolve_user(identifier: str):
     if not ident:
         return None
 
-    user = await db.users.find_one({"email": ident.lower()})
+    user = await auth_db.users.find_one({"email": ident.lower()})
     if user:
         return user
 
@@ -32,8 +33,23 @@ async def _resolve_user(identifier: str):
         {"code": {"$regex": f"^{re.escape(ident)}$", "$options": "i"}}, {"_id": 0}
     )
     if vendor:
-        return await db.users.find_one({"vendor_id": vendor["id"]})
+        return await auth_db.users.find_one({"vendor_id": vendor["id"]})
     return None
+
+
+def _user_out(user: dict) -> UserOut:
+    """Signed-in identity, including the role label + permissions the UI shows."""
+    role = user.get("role", "vendor")
+    return UserOut(
+        id=user["id"],
+        email=user.get("email", ""),
+        name=user.get("name", ""),
+        mobile=user.get("mobile", ""),
+        role=role,
+        role_label=ROLE_LABELS.get(role, role),
+        permissions=user.get("permissions") or DEFAULT_PERMISSIONS.get(role, ["view"]),
+        vendor_id=user.get("vendor_id"),
+    )
 
 
 @router.post("/login", response_model=UserOut)
@@ -46,12 +62,12 @@ async def login(payload: LoginRequest, response: Response):
         key=COOKIE_NAME, value=token, httponly=True, samesite="lax",
         max_age=SESSION_DAYS * 86400, path="/",
     )
-    return UserOut(**{k: user.get(k) for k in ("id", "email", "name", "role", "vendor_id")})
+    return _user_out(user)
 
 
 @router.get("/me", response_model=UserOut)
 async def me(user=Depends(current_user)):
-    return UserOut(**{k: user.get(k) for k in ("id", "email", "name", "role", "vendor_id")})
+    return _user_out(user)
 
 
 @router.post("/change-password")
@@ -61,7 +77,7 @@ async def change_password(payload: PasswordChange, user=Depends(current_user)):
     new = payload.new_password.strip()
     if len(new) < 6:
         raise HTTPException(status_code=400, detail="New password must be at least 6 characters")
-    await db.users.update_one(
+    await auth_db.users.update_one(
         {"id": user["id"]}, {"$set": {"password_hash": hash_password(new)}}
     )
     return {"ok": True}

@@ -344,6 +344,30 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - UI: Create User has a Staff (view only) option; each user row has a role
   dropdown (admin only, not on your own row); sidebar badge shows "Staff".
 
+## Infrastructure & roles (Nov 2026)
+- Upstream ERP is now **https://erp.arunenterprisespryg.in** (`ARUN_PORTAL_URL`);
+  the portal's own domain is **https://vendor.arunenterprisespryg.in**. Browser
+  title / favicon label: "ARUN ENTERPRISES VENDOR PORTAL".
+- **Logins live in their own database**: `AUTH_DB_NAME` (default
+  `arun_vendor_auth`) exposed as `auth_db` in lib/db.py. `auth_db.users` /
+  `auth_db.sessions` are the only login source; the ERP sync only writes the app
+  database, so a sync can never disturb a login. One-time move:
+  `python backend/migrate_auth_db.py` (also promotes the owner to SuperAdmin).
+- **Roles**: superadmin (users + roles + permissions + everything admin can do) ·
+  admin (changes portal data) · staff (sees all, read-only) · vendor (own records).
+  Role names are accepted in any spelling (`SuperAdmin`, `SUPRADMIN`, `super admin`)
+  via `normalize_role()`; `lib/auth.py` adds `superadmin_user`.
+  Permissions: view / edit / approve (stored per user, shown after login).
+- `POST /api/users` and `PATCH /api/users/{id}/role` are **SuperAdmin only**.
+  Create-user form fields: name, email, mobile, password, confirm password, role,
+  permissions. Login response/`/auth/me` carry `role_label` + `permissions`, shown
+  in the sidebar and under the dashboard heading.
+- **No CORS middleware** — frontend and `/api` are same-origin (Vite proxy in dev,
+  Nginx in production). Production backend port is **8003** (preview stays 8001).
+- Server setup + Hostinger VPS migration guide: `docs/VPS_SETUP_GUIDE.md` and the
+  rendered `docs/ARUN_VENDOR_PORTAL_VPS_SETUP_GUIDE.pdf`
+  (rebuild with `python docs/make_guide_pdf.py`).
+
 ## Payment Advice PDF
 - `GET /api/bills/{id}/payment-advice` -> branded A4 PDF (lib/pdf.py `payment_advice_pdf`): PV No., UTR/Ref, payment date & mode, voucher status, invoice no/date, PO number, Paid To block (company, vendor code, bank, IFSC, account no, GSTIN), payment summary with taxable/GST/TDS/amount paid and the approver name.
 - Access: own vendor or admin (403 cross-vendor); 400 when no UTR/PV exists yet; 404 unknown bill.

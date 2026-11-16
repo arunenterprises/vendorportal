@@ -24,14 +24,28 @@ import { useAuth } from "@/lib/useAuth";
 import WorkOrderCopyUpload from "@/components/WorkOrderCopyUpload";
 import { downloadFile } from "@/lib/download";
 
-const EMPTY_USER = { email: "", name: "", role: "vendor", vendor_code: "", password: "" };
-const ROLE_LABELS = { vendor: "Vendor", staff: "Staff (view only)", admin: "Administrator" };
+const EMPTY_USER = {
+  email: "", name: "", mobile: "", role: "vendor", vendor_code: "",
+  password: "", confirm_password: "", permissions: ["view"],
+};
+const ROLE_LABELS = {
+  vendor: "Vendor",
+  staff: "Staff (view only)",
+  admin: "Admin",
+  superadmin: "SuperAdmin",
+};
+const PERMISSIONS = [
+  { key: "view", label: "View" },
+  { key: "edit", label: "Edit" },
+  { key: "approve", label: "Approve" },
+];
 
 function AdminInner() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { user: me } = useAuth();
-  const isAdmin = me?.role === "admin";  // staff may view everything but change nothing
+  const isAdmin = me?.role === "admin" || me?.role === "superadmin";  // staff may view but not change
+  const isSuperAdmin = me?.role === "superadmin";  // users, roles and permissions
   const qc = useQueryClient();
   const [userOpen, setUserOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_USER);
@@ -155,12 +169,19 @@ function AdminInner() {
       toast.error(t("password_required_admin"));
       return;
     }
+    if (form.password.trim() && form.password.trim() !== form.confirm_password.trim()) {
+      toast.error("Password and confirm password do not match");
+      return;
+    }
     createUser.mutate({
       email: form.email.trim(),
       name: form.name.trim(),
+      mobile: form.mobile.trim(),
       role: form.role,
       vendor_code: form.vendor_code.trim() || null,
       password: form.password.trim() || null,
+      confirm_password: form.confirm_password.trim() || null,
+      permissions: form.permissions,
     });
   }
 
@@ -217,7 +238,7 @@ function AdminInner() {
                 <p className="text-xs text-slate-500 mt-0.5">{t("users_note")}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {isAdmin ? (
+                {isSuperAdmin ? (
                 <Dialog open={userOpen} onOpenChange={setUserOpen}>
                 <DialogTrigger
                   render={
@@ -241,11 +262,12 @@ function AdminInner() {
                         <SelectContent>
                           <SelectItem value="vendor" data-testid="admin-user-role-vendor">Vendor</SelectItem>
                           <SelectItem value="staff" data-testid="admin-user-role-staff">Staff (view only)</SelectItem>
-                          <SelectItem value="admin" data-testid="admin-user-role-admin">Administrator</SelectItem>
+                          <SelectItem value="admin" data-testid="admin-user-role-admin">Admin</SelectItem>
+                          <SelectItem value="superadmin" data-testid="admin-user-role-superadmin">SuperAdmin</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-[11px] text-slate-500">
-                        Only an Administrator can change data in this portal. Staff can see everything but cannot edit.
+                        SuperAdmin manages users, roles and permissions. Admin can change portal data. Staff can only view. Vendor sees its own records.
                       </p>
                     </div>
 
@@ -300,6 +322,16 @@ function AdminInner() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <Label htmlFor="u-mobile">Mobile No</Label>
+                      <Input
+                        id="u-mobile"
+                        value={form.mobile}
+                        onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                        placeholder="10-digit mobile number"
+                        data-testid="admin-user-mobile-input"
+                      />
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="u-pass">
                         {form.role === "admin" ? t("password") : `${t("password")} (${t("optional")})`}
                       </Label>
@@ -311,6 +343,45 @@ function AdminInner() {
                         data-testid="admin-user-password-input"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="u-confirm">Confirm Password</Label>
+                      <Input
+                        id="u-confirm"
+                        type="password"
+                        value={form.confirm_password}
+                        onChange={(e) => setForm({ ...form, confirm_password: e.target.value })}
+                        data-testid="admin-user-confirm-password-input"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Permissions</Label>
+                      <div className="flex flex-wrap gap-3">
+                        {PERMISSIONS.map((p) => (
+                          <label
+                            key={p.key}
+                            className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer select-none"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={form.permissions.includes(p.key)}
+                              onChange={(e) =>
+                                setForm({
+                                  ...form,
+                                  permissions: e.target.checked
+                                    ? [...form.permissions, p.key]
+                                    : form.permissions.filter((x) => x !== p.key),
+                                })
+                              }
+                              data-testid={`admin-user-permission-${p.key}`}
+                              className="h-3.5 w-3.5 accent-[#1D4ED8]"
+                            />
+                            {p.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
                     <DialogFooter>
                       <Button type="button" variant="outline" onClick={() => setUserOpen(false)}>{t("cancel")}</Button>
                       <Button
@@ -356,14 +427,19 @@ function AdminInner() {
                       <td className="px-4 py-3.5 text-slate-900 truncate" title={u.email}>{u.email}</td>
                       <td className="px-4 py-3.5 text-slate-700 truncate" title={u.name}>{u.name}</td>
                       <td className="px-4 py-3.5">
-                        <Badge variant="outline" className={u.role === "admin"
-                          ? "bg-blue-50 text-blue-800 border-blue-200"
-                          : u.role === "staff"
-                            ? "bg-amber-50 text-amber-800 border-amber-200"
-                            : "bg-slate-100 text-slate-700 border-slate-300"}>
-                          {ROLE_LABELS[u.role] ?? u.role}
+                        <Badge variant="outline" className={u.role === "superadmin"
+                          ? "bg-violet-50 text-violet-800 border-violet-200"
+                          : u.role === "admin"
+                            ? "bg-blue-50 text-blue-800 border-blue-200"
+                            : u.role === "staff"
+                              ? "bg-amber-50 text-amber-800 border-amber-200"
+                              : "bg-slate-100 text-slate-700 border-slate-300"}>
+                          {u.role_label || ROLE_LABELS[u.role] || u.role}
                         </Badge>
-                        {isAdmin && u.id !== me?.id ? (
+                        <span className="block mt-1 text-[10px] text-slate-500" data-testid={`admin-user-permissions-${u.email}`}>
+                          {(u.permissions || []).join(" · ") || "view"}
+                        </span>
+                        {isSuperAdmin && u.id !== me?.id ? (
                           <select
                             value={u.role}
                             onChange={(e) => changeRole.mutate({ id: u.id, role: e.target.value })}
@@ -371,7 +447,8 @@ function AdminInner() {
                             className="mt-1.5 block w-full text-[11px] border border-slate-200 rounded-md px-1.5 py-1
                               bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1D4ED8]"
                           >
-                            <option value="admin">Administrator</option>
+                            <option value="superadmin">SuperAdmin</option>
+                            <option value="admin">Admin</option>
                             <option value="staff">Staff (view only)</option>
                             {u.vendor_code ? <option value="vendor">Vendor</option> : null}
                           </select>

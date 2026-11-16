@@ -17,7 +17,7 @@ import httpx
 
 from lib.auth import hash_password
 from lib.dates import today_iso
-from lib.db import db
+from lib.db import auth_db, db
 
 logger = logging.getLogger(__name__)
 
@@ -484,17 +484,17 @@ async def sync_from_arun() -> dict:
         if "@" not in raw_email or raw_email in {"nil", "na", "n/a", "-", "none"}:
             raw_email = ""
         email = raw_email or f"{code.lower()}@arunenterprises.local"
-        existing = await db.users.find_one({"vendor_id": vendor["id"]})
+        existing = await auth_db.users.find_one({"vendor_id": vendor["id"]})
         if existing:
-            await db.users.update_one(
+            await auth_db.users.update_one(
                 {"vendor_id": vendor["id"]},
                 {"$set": {"name": vendor["contact_person"] or vendor["company_name"]}},
             )
         else:
             # another account already owns this email -> fall back to the code-based address
-            if await db.users.find_one({"email": email}):
+            if await auth_db.users.find_one({"email": email}):
                 email = f"{code.lower()}@arunenterprises.local"
-            await db.users.insert_one({
+            await auth_db.users.insert_one({
                 "id": f"arun-user-{code}",
                 "email": email,
                 "name": vendor["contact_person"] or vendor["company_name"],

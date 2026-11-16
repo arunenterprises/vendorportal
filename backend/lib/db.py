@@ -14,6 +14,11 @@ mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ["DB_NAME"]]
 
+# Logins live in their OWN database so ERP-synced data can never disturb them
+# (AUTH_DB_NAME, default arun_vendor_auth). `auth_db.users` / `auth_db.sessions`
+# are the only source of truth for who may sign in.
+auth_db = client[os.environ.get("AUTH_DB_NAME", "arun_vendor_auth")]
+
 logger = logging.getLogger(__name__)
 
 # One entry per collection: every field a route filters, sorts, or dedupes on. Applied by ensure_indexes() at startup.
@@ -49,7 +54,19 @@ INDEXES: dict[str, list[IndexModel]] = {
 }
 
 
+AUTH_INDEXES: dict[str, list[IndexModel]] = {
+    "users": INDEXES["users"],
+    "sessions": INDEXES["sessions"],
+}
+
+
 async def ensure_indexes() -> None:
+    for collection, models in AUTH_INDEXES.items():
+        for model in models:
+            try:
+                await auth_db[collection].create_indexes([model])
+            except Exception as exc:
+                logger.error("ensure_indexes(auth.%s.%s): %s", collection, model.document["name"], exc)
     for collection, models in INDEXES.items():
         for model in models:  # one at a time so a bad spec skips only itself
             try:
