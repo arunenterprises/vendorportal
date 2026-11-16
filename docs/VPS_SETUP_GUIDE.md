@@ -233,7 +233,7 @@ Restore when needed: `mongorestore --drop /var/backups/mongo/<date>`
 
 1. `https://vendor.arunenterprisespryg.in` opens with the padlock.
 2. SuperAdmin signs in; the sidebar shows **SuperAdmin**.
-3. Admin → **Sync from Workflow Portal** pulls vendors, work orders and bills from the ERP.
+3. Admin → **Sync from ERP Portal** pulls vendors, work orders and bills from the ERP.
 4. A vendor signs in with their vendor code and sees only their own records.
 5. Bills → PDF downloads; Admin → Bills → Export to Excel downloads.
 6. `systemctl status vendor-portal-api mongod nginx` — all three active.
