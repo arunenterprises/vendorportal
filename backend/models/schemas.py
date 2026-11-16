@@ -95,6 +95,7 @@ class PortalUserCreate(BaseModel):
     password: Optional[str] = None
     confirm_password: Optional[str] = None
     permissions: list[str] = []  # any of: view, edit, approve
+    vendor_ids: list[str] = []  # staff only: limit this login to these vendors (empty = all)
 
 
 class WorkOrderStatusUpdate(BaseModel):
@@ -137,6 +138,12 @@ class RoleUpdate(BaseModel):
     permissions: Optional[list[str]] = None
 
 
+class VendorScopeUpdate(BaseModel):
+    """SuperAdmin only: which vendors a staff login may see (empty list = all)."""
+
+    vendor_ids: list[str] = []
+
+
 class PasswordReset(BaseModel):
     password: str
 
@@ -160,6 +167,8 @@ class UserRow(BaseModel):
     vendor_code: str = ""
     vendor_name: str = ""
     source: str = "local"
+    vendor_ids: list[str] = []  # staff scope — empty means every vendor
+    vendor_scope_labels: list[str] = []
 
 
 class Milestone(BaseModel):

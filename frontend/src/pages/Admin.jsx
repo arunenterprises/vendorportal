@@ -26,7 +26,7 @@ import { downloadFile } from "@/lib/download";
 
 const EMPTY_USER = {
   email: "", name: "", mobile: "", role: "vendor", vendor_code: "",
-  password: "", confirm_password: "", permissions: ["view"],
+  password: "", confirm_password: "", permissions: ["view"], vendor_ids: [],
 };
 const ROLE_LABELS = {
   vendor: "Vendor",
@@ -107,6 +107,23 @@ function AdminInner() {
     onError: (e) => toast.error(e?.body?.detail || t("sync_failed")),
   });
 
+  const [scopeUser, setScopeUser] = useState(null);     // staff login whose vendor scope is being edited
+  const [scopeDraft, setScopeDraft] = useState([]);
+
+  const saveScope = useMutation({
+    mutationFn: ({ id, vendor_ids }) => apiPatch(`/users/${id}/vendor-scope`, { vendor_ids }),
+    onSuccess: (u) => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      setScopeUser(null);
+      toast.success(
+        u.vendor_ids?.length
+          ? `${u.email} can now see ${u.vendor_ids.length} vendor(s)`
+          : `${u.email} can now see all vendors`,
+      );
+    },
+    onError: (e) => toast.error(e?.body?.detail || "Could not update vendor access"),
+  });
+
   const createUser = useMutation({
     mutationFn: (payload) => apiPost("/users", payload),
     onSuccess: (u) => {
@@ -182,6 +199,7 @@ function AdminInner() {
       password: form.password.trim() || null,
       confirm_password: form.confirm_password.trim() || null,
       permissions: form.permissions,
+      vendor_ids: form.role === "staff" ? form.vendor_ids : [],
     });
   }
 
@@ -300,6 +318,46 @@ function AdminInner() {
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-slate-500">{t("vendor_code_hint")}</p>
+                      </div>
+                    )}
+
+                    {form.role === "staff" && (
+                      <div className="space-y-2">
+                        <Label>Vendor Access</Label>
+                        <p className="text-[11px] text-slate-500">
+                          Tick the vendors this staff member may see. Leave all unticked to allow every vendor.
+                        </p>
+                        <div
+                          className="max-h-40 overflow-y-auto rounded-md border border-slate-200 divide-y divide-slate-100"
+                          data-testid="admin-user-vendor-scope-list"
+                        >
+                          {vendorRows.length === 0 ? (
+                            <p className="px-3 py-3 text-xs text-slate-400">No vendors synced yet</p>
+                          ) : vendorRows.map((v) => (
+                            <label
+                              key={v.id}
+                              className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 cursor-pointer
+                                hover:bg-slate-50 [transition:background-color_.15s_ease]"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={form.vendor_ids.includes(v.id)}
+                                onChange={(e) =>
+                                  setForm({
+                                    ...form,
+                                    vendor_ids: e.target.checked
+                                      ? [...form.vendor_ids, v.id]
+                                      : form.vendor_ids.filter((x) => x !== v.id),
+                                  })
+                                }
+                                data-testid={`admin-user-vendor-scope-${v.code}`}
+                                className="h-3.5 w-3.5 accent-[#1D4ED8]"
+                              />
+                              <span className="font-mono text-[#1D4ED8]">{v.code}</span>
+                              <span className="truncate">{v.company_name}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -453,6 +511,27 @@ function AdminInner() {
                             {u.vendor_code ? <option value="vendor">Vendor</option> : null}
                           </select>
                         ) : null}
+                        {u.role === "staff" ? (
+                          <span
+                            className="block mt-1 text-[10px] text-slate-500"
+                            data-testid={`admin-user-vendor-scope-label-${u.email}`}
+                          >
+                            {u.vendor_scope_labels?.length
+                              ? `Vendors: ${u.vendor_scope_labels.join(", ")}`
+                              : "Vendors: all"}
+                          </span>
+                        ) : null}
+                        {isSuperAdmin && u.role === "staff" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => { setScopeUser(u); setScopeDraft(u.vendor_ids || []); }}
+                            data-testid={`admin-user-vendor-scope-edit-${u.email}`}
+                            className="mt-1.5 h-7 text-[11px] gap-1"
+                          >
+                            <Building2 size={12} /> Vendor Access
+                          </Button>
+                        ) : null}
                       </td>
                       <td className="px-4 py-3.5 font-mono text-xs text-[#1D4ED8]">{u.vendor_code || "—"}</td>
                       <td className="px-4 py-3.5">
@@ -488,6 +567,62 @@ function AdminInner() {
                 </tbody>
               </table>
             </div>
+
+            {/* Vendor access (staff scope) dialog — SuperAdmin only */}
+            <Dialog open={!!scopeUser} onOpenChange={(o) => { if (!o) setScopeUser(null); }}>
+              <DialogContent className="bg-white sm:max-w-[460px]">
+                <DialogHeader>
+                  <DialogTitle>Vendor Access</DialogTitle>
+                  <DialogDescription>
+                    Choose the vendors {scopeUser?.email} may see. Select none to allow every vendor.
+                  </DialogDescription>
+                </DialogHeader>
+                <div
+                  className="max-h-64 overflow-y-auto rounded-md border border-slate-200 divide-y divide-slate-100"
+                  data-testid="admin-vendor-scope-dialog-list"
+                >
+                  {vendorRows.length === 0 ? (
+                    <p className="px-3 py-3 text-xs text-slate-400">No vendors synced yet</p>
+                  ) : vendorRows.map((v) => (
+                    <label
+                      key={v.id}
+                      className="flex items-center gap-2 px-3 py-2 text-xs text-slate-700 cursor-pointer
+                        hover:bg-slate-50 [transition:background-color_.15s_ease]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={scopeDraft.includes(v.id)}
+                        onChange={(e) =>
+                          setScopeDraft(
+                            e.target.checked
+                              ? [...scopeDraft, v.id]
+                              : scopeDraft.filter((x) => x !== v.id),
+                          )
+                        }
+                        data-testid={`admin-vendor-scope-option-${v.code}`}
+                        className="h-3.5 w-3.5 accent-[#1D4ED8]"
+                      />
+                      <span className="font-mono text-[#1D4ED8]">{v.code}</span>
+                      <span className="truncate">{v.company_name}</span>
+                    </label>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setScopeDraft([])} data-testid="admin-vendor-scope-clear">
+                    Allow all
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={saveScope.isPending}
+                    onClick={() => saveScope.mutate({ id: scopeUser.id, vendor_ids: scopeDraft })}
+                    data-testid="admin-vendor-scope-save"
+                    className="bg-[#1D4ED8] hover:bg-[#1E40AF] text-white"
+                  >
+                    Save
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Update password dialog (replaces the inline new-password field) */}
             <Dialog open={!!pwUser} onOpenChange={(o) => { if (!o) setPwUser(null); }}>

@@ -10,7 +10,14 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from lib.auth import admin_user, current_user, sees_all, staff_user
+from lib.auth import (
+    admin_user,
+    allowed_vendor_codes,
+    can_see_vendor,
+    current_user,
+    scope_filter,
+    staff_user,
+)
 from lib.dates import today_iso
 from lib.db import db
 from lib.pdf import invoice_pdf, payment_advice_pdf
@@ -21,7 +28,7 @@ router = APIRouter(prefix="/bills", tags=["bills"])
 
 @router.get("", response_model=list[Bill])
 async def list_bills(user=Depends(current_user)):
-    q = {} if sees_all(user) else {"vendor_id": user.get("vendor_id")}
+    q = scope_filter(user)
     docs = await db.bills.find(q, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return [Bill(**d) for d in docs]
 
@@ -29,7 +36,7 @@ async def list_bills(user=Depends(current_user)):
 @router.get("/changes")
 async def bill_changes(user=Depends(current_user)):
     """What changed on the workflow portal recently — newest first."""
-    q = {} if sees_all(user) else {"vendor_id": user.get("vendor_id")}
+    q = scope_filter(user)
     rows = await db.bill_changes.find(q, {"_id": 0}).sort("changed_at", -1).to_list(25)
     return rows
 
@@ -41,10 +48,8 @@ async def payments_register(user=Depends(current_user)):
     Admin sees every voucher; a vendor sees only its own. Fields are the register's
     own: PV/GPV no, bill ref no, bill no, amount, payment date, UTR and status.
     """
-    q = {}
-    if not sees_all(user):
-        vendor = await db.vendors.find_one({"id": user.get("vendor_id")}, {"_id": 0, "code": 1})
-        q = {"vendor_code": (vendor or {}).get("code", "__none__")}
+    codes = await allowed_vendor_codes(user)
+    q = {} if codes is None else {"vendor_code": {"$in": codes}}
     rows = await db.payment_vouchers.find(q, {"_id": 0}).sort("payment_date", -1).to_list(500)
     return rows
 
@@ -62,7 +67,7 @@ async def export_bills_xlsx(
     from openpyxl import Workbook
     from openpyxl.styles import Font
 
-    q: dict = {}
+    q: dict = dict(scope_filter(user))
     if status and status != "all":
         q["status"] = status
     docs = await db.bills.find(q, {"_id": 0}).sort("invoice_date", -1).to_list(5000)
@@ -169,7 +174,7 @@ async def get_bill(bill_id: str, user=Depends(current_user)):
     doc = await db.bills.find_one({"id": bill_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Bill not found")
-    if not sees_all(user) and doc["vendor_id"] != user.get("vendor_id"):
+    if not can_see_vendor(user, doc["vendor_id"]):
         raise HTTPException(status_code=403, detail="Not allowed")
     return Bill(**doc)
 
@@ -180,7 +185,7 @@ async def download_payment_advice(bill_id: str, user=Depends(current_user)):
     doc = await db.bills.find_one({"id": bill_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Bill not found")
-    if not sees_all(user) and doc["vendor_id"] != user.get("vendor_id"):
+    if not can_see_vendor(user, doc["vendor_id"]):
         raise HTTPException(status_code=403, detail="Not allowed")
     if not (doc.get("utr") or doc.get("pv_no")):
         raise HTTPException(status_code=400, detail="Payment not released yet for this invoice")
@@ -196,7 +201,7 @@ async def download_bill(bill_id: str, user=Depends(current_user)):
     doc = await db.bills.find_one({"id": bill_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Bill not found")
-    if not sees_all(user) and doc["vendor_id"] != user.get("vendor_id"):
+    if not can_see_vendor(user, doc["vendor_id"]):
         raise HTTPException(status_code=403, detail="Not allowed")
     vendor = await db.vendors.find_one({"id": doc["vendor_id"]}, {"_id": 0}) or {}
     pdf = invoice_pdf(doc, vendor)

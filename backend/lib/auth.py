@@ -83,3 +83,39 @@ async def staff_user(user=None, vp_session: str | None = Cookie(default=None)):
 def sees_all(user: dict) -> bool:
     """Roles whose reads are NOT scoped to a single vendor."""
     return user.get("role") in ("superadmin", "admin", "staff")
+
+
+def allowed_vendor_ids(user: dict) -> list[str] | None:
+    """Vendor ids this login may read. None = every vendor (no restriction).
+
+    A SuperAdmin may limit a Staff login to chosen vendors (`vendor_ids`);
+    an empty/absent list keeps the old behaviour of seeing all vendors.
+    """
+    if user.get("role") == "staff":
+        ids = [v for v in (user.get("vendor_ids") or []) if v]
+        return ids or None
+    if sees_all(user):
+        return None
+    return [user.get("vendor_id")]
+
+
+def scope_filter(user: dict, field: str = "vendor_id") -> dict:
+    """Mongo filter restricting reads to the vendors this login may see."""
+    ids = allowed_vendor_ids(user)
+    if ids is None:
+        return {}
+    return {field: {"$in": ids}}
+
+
+def can_see_vendor(user: dict, vendor_id: str | None) -> bool:
+    ids = allowed_vendor_ids(user)
+    return ids is None or vendor_id in ids
+
+
+async def allowed_vendor_codes(user: dict) -> list[str] | None:
+    """Same restriction expressed as vendor codes (payment vouchers key on code)."""
+    ids = allowed_vendor_ids(user)
+    if ids is None:
+        return None
+    rows = await db.vendors.find({"id": {"$in": ids}}, {"_id": 0, "code": 1}).to_list(500)
+    return [r.get("code", "") for r in rows] or ["__none__"]

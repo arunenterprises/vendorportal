@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from lib.auth import current_user, sees_all
+from lib.auth import current_user, scope_filter
 from lib.db import db
 from models.schemas import DocumentCreate, DocumentOut
 
@@ -26,7 +26,7 @@ ALLOWED_DOC_TYPES = [
 
 @router.get("", response_model=list[DocumentOut])
 async def list_documents(user=Depends(current_user)):
-    q = {} if sees_all(user) else {"vendor_id": user.get("vendor_id")}
+    q = scope_filter(user)
     docs = await db.documents.find(q, {"_id": 0, "data_base64": 0}).sort("uploaded_at", -1).to_list(500)
     vendors = await db.vendors.find({}, {"_id": 0, "id": 1, "code": 1, "company_name": 1}).to_list(1000)
     vmap = {v["id"]: v for v in vendors}

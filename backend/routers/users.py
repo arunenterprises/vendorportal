@@ -10,7 +10,13 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from lib.auth import admin_user, hash_password, staff_user, superadmin_user
 from lib.db import auth_db, db
-from models.schemas import PasswordReset, PortalUserCreate, RoleUpdate, UserRow
+from models.schemas import (
+    PasswordReset,
+    PortalUserCreate,
+    RoleUpdate,
+    UserRow,
+    VendorScopeUpdate,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -50,11 +56,33 @@ def normalize_role(value: str) -> str | None:
     return ROLE_ALIASES.get(str(value or "").strip().lower().replace("-", "_"))
 
 
+async def _clean_scope(vendor_ids: list[str]) -> list[str]:
+    """Keep only ids that really exist as vendors; 404 on anything unknown."""
+    ids = [str(v).strip() for v in (vendor_ids or []) if str(v).strip()]
+    if not ids:
+        return []
+    rows = await db.vendors.find({"id": {"$in": ids}}, {"_id": 0, "id": 1}).to_list(500)
+    found = {r["id"] for r in rows}
+    missing = [i for i in ids if i not in found]
+    if missing:
+        raise HTTPException(status_code=404, detail="Some selected vendors no longer exist")
+    return list(dict.fromkeys(ids))
+
+
 async def _row(user: dict) -> UserRow:
     vendor = None
     if user.get("vendor_id"):
         vendor = await db.vendors.find_one({"id": user["vendor_id"]}, {"_id": 0})
+    scope_ids = [v for v in (user.get("vendor_ids") or []) if v]
+    scope_labels: list[str] = []
+    if scope_ids:
+        rows = await db.vendors.find(
+            {"id": {"$in": scope_ids}}, {"_id": 0, "code": 1, "company_name": 1}
+        ).to_list(500)
+        scope_labels = [f"{r.get('code', '')} · {r.get('company_name', '')}".strip(" ·") for r in rows]
     return UserRow(
+        vendor_ids=scope_ids,
+        vendor_scope_labels=scope_labels,
         id=user["id"],
         email=user.get("email", ""),
         name=user.get("name", ""),
@@ -125,6 +153,8 @@ async def create_user(payload: PortalUserCreate, user=Depends(superadmin_user)):
         "role": role,
         "permissions": payload.permissions or DEFAULT_PERMISSIONS[role],
         "vendor_id": vendor_id,
+        # staff scope: only meaningful for a staff login; empty list = every vendor
+        "vendor_ids": await _clean_scope(payload.vendor_ids) if role == "staff" else [],
         "password_hash": hash_password(password),
         "source": "local",
     }
@@ -153,9 +183,29 @@ async def change_role(user_id: str, payload: RoleUpdate, user=Depends(superadmin
             detail="This login is not linked to a vendor, so it cannot become a vendor user",
         )
     update = {"role": role, "permissions": payload.permissions or DEFAULT_PERMISSIONS[role]}
+    if role != "staff":
+        update["vendor_ids"] = []  # scope only applies to staff logins
     await auth_db.users.update_one({"id": user_id}, {"$set": update})
     await auth_db.sessions.delete_many({"user_id": user_id})  # the new role must apply immediately
     target.update(update)
+    return await _row(target)
+
+
+@router.patch("/{user_id}/vendor-scope", response_model=UserRow)
+async def change_vendor_scope(
+    user_id: str, payload: VendorScopeUpdate, user=Depends(superadmin_user)
+):
+    """SuperAdmin only: limit a staff login to chosen vendors (empty list = all vendors)."""
+    target = await auth_db.users.find_one({"id": user_id}, {"_id": 0})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.get("role") != "staff":
+        raise HTTPException(
+            status_code=400, detail="Vendor scope applies to staff logins only"
+        )
+    ids = await _clean_scope(payload.vendor_ids)
+    await auth_db.users.update_one({"id": user_id}, {"$set": {"vendor_ids": ids}})
+    target["vendor_ids"] = ids
     return await _row(target)
 
 

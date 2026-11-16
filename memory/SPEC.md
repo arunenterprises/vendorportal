@@ -344,6 +344,20 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - UI: Create User has a Staff (view only) option; each user row has a role
   dropdown (admin only, not on your own row); sidebar badge shows "Staff".
 
+## Staff vendor scope (Nov 2026)
+- A staff login may be limited to chosen vendors: `auth_db.users.vendor_ids` (list
+  of vendor ids). Empty/absent = every vendor (old behaviour).
+- `lib/auth.py`: `allowed_vendor_ids(user)` (None = all), `scope_filter(user, field)`,
+  `can_see_vendor(user, vendor_id)`, `allowed_vendor_codes(user)` (payment vouchers
+  key on vendor_code). Every read scope in vendors/summary/bills/work_orders/
+  documents + bills Excel export now goes through these.
+- `PATCH /api/users/{id}/vendor-scope` {vendor_ids} — SuperAdmin only; 400 when the
+  target is not staff, 404 on an unknown vendor id. Changing a user's role away from
+  staff clears `vendor_ids`. `POST /api/users` accepts `vendor_ids` for staff.
+- `UserRow` returns `vendor_ids` + `vendor_scope_labels` ("CODE · Company").
+- UI (Admin → Users): vendor checklist inside Create User when role = Staff, and a
+  "Vendor Access" dialog per staff row ("Allow all" clears the scope).
+
 ## Infrastructure & roles (Nov 2026)
 - Upstream ERP is now **https://erp.arunenterprisespryg.in** (`ARUN_PORTAL_URL`);
   the portal's own domain is **https://vendor.arunenterprisespryg.in**. Browser

@@ -10,7 +10,7 @@ import base64
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from lib.auth import admin_user, current_user, sees_all
+from lib.auth import admin_user, allowed_vendor_ids, can_see_vendor, current_user, scope_filter, sees_all
 from lib.db import db
 from lib.pdf import work_order_pdf
 from models.schemas import (
@@ -55,11 +55,10 @@ async def _decorate(docs: list[dict]) -> list[dict]:
 
 @router.get("", response_model=list[WorkOrder])
 async def list_work_orders(user=Depends(current_user)):
-    if sees_all(user):
-        q = {}
-    else:
+    q = dict(scope_filter(user))
+    if not sees_all(user):
         # a work order the admin has taken off-air is hidden from the vendor
-        q = {"vendor_id": user.get("vendor_id"), "live": {"$ne": False}}
+        q["live"] = {"$ne": False}
     docs = await db.work_orders.find(q, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return [WorkOrder(**d) for d in await _decorate(docs)]
 
@@ -69,9 +68,9 @@ async def get_work_order(wo_id: str, user=Depends(current_user)):
     doc = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Work order not found")
+    if not can_see_vendor(user, doc["vendor_id"]):
+        raise HTTPException(status_code=403, detail="Not allowed")
     if not sees_all(user):
-        if doc["vendor_id"] != user.get("vendor_id"):
-            raise HTTPException(status_code=403, detail="Not allowed")
         if doc.get("live") is False:
             raise HTTPException(status_code=404, detail="Work order not found")
     return WorkOrder(**(await _decorate([doc]))[0])
@@ -179,7 +178,7 @@ async def download_po_file(wo_id: str, user=Depends(current_user)):
     doc = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Work order not found")
-    if not sees_all(user) and doc["vendor_id"] != user.get("vendor_id"):
+    if not can_see_vendor(user, doc["vendor_id"]):
         raise HTTPException(status_code=403, detail="Not allowed")
     raw = doc.get("po_file_base64") or ""
     if not raw:
@@ -197,7 +196,7 @@ async def download_work_order(wo_id: str, user=Depends(current_user)):
     doc = await db.work_orders.find_one({"id": wo_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Work order not found")
-    if not sees_all(user) and doc["vendor_id"] != user.get("vendor_id"):
+    if not can_see_vendor(user, doc["vendor_id"]):
         raise HTTPException(status_code=403, detail="Not allowed")
     vendor = await db.vendors.find_one({"id": doc["vendor_id"]}, {"_id": 0}) or {}
     pdf = work_order_pdf(doc, vendor)
