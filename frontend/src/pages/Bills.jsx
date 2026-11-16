@@ -37,7 +37,7 @@ function BillsInner() {
   const [open, setOpen] = useState(null);
   const [draft, setDraft] = useState({});
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const qc = useQueryClient();
 
   const savePayment = useMutation({

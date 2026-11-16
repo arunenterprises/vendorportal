@@ -20,7 +20,7 @@ const FILTERS = ["all", "active", "completed", "on_hold"];
 function WorkOrdersInner() {
   const { t } = useI18n();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");

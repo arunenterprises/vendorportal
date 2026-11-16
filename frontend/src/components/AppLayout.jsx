@@ -19,7 +19,7 @@ function navItems(role) {
     { to: "/vendor-profile", key: "nav_profile", icon: Building2, id: "vendor-profile" },
     { to: "/documents", key: "nav_documents", icon: ShieldCheck, id: "documents" },
   ];
-  if (role === "admin" || role === "staff") {
+  if (role === "superadmin" || role === "admin" || role === "staff") {
     base.push({ to: "/admin", key: "nav_admin", icon: Sparkles, id: "admin" });
   }
   return base;

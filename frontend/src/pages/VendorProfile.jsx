@@ -21,7 +21,7 @@ function Field({ label, value, mono }) {
 function VendorProfileInner() {
   const { t } = useI18n();
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
 
   const { data: vendor, isLoading, isError } = useQuery({
     queryKey: ["vendor", "me"],

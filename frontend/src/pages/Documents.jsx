@@ -106,7 +106,7 @@ function DocumentsInner() {
 
   const rows = docs.isError ? [] : docs.data ?? [];
   const isVendor = user?.role === "vendor";
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "admin" || user?.role === "superadmin";
 
   return (
     <AppLayout

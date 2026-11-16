@@ -81,8 +81,8 @@ async def download_document(doc_id: str, user=Depends(current_user)):
     doc = await db.documents.find_one({"id": doc_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    # downloads are restricted to the admin only
-    if user.get("role") != "admin":
+    # downloads are restricted to admin / superadmin only
+    if user.get("role") not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Only the admin can download documents")
     blob = base64.b64decode(doc["data_base64"])
     return Response(
@@ -96,8 +96,8 @@ async def delete_document(doc_id: str, user=Depends(current_user)):
     doc = await db.documents.find_one({"id": doc_id}, {"_id": 0, "data_base64": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    # vendors may upload but never delete; only the admin can remove a document
-    if user.get("role") != "admin":
+    # vendors may upload but never delete; only an admin / superadmin can remove it
+    if user.get("role") not in ("admin", "superadmin"):
         raise HTTPException(status_code=403, detail="Only the admin can delete documents")
     await db.documents.delete_one({"id": doc_id})
     return {"ok": True}

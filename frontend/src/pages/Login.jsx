@@ -24,7 +24,7 @@ export default function Login() {
     onSuccess: (user) => {
       beginSession();
       toast.success(`${t("welcome_back")}, ${user.name}`);
-      navigate(user.role === "admin" ? "/admin" : "/dashboard", { replace: true });
+      navigate(["superadmin", "admin", "staff"].includes(user.role) ? "/admin" : "/dashboard", { replace: true });
     },
     onError: () => toast.error(t("login_failed")),
   });

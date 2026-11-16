@@ -344,6 +344,13 @@ portal grows. Credentials: see `memory/test_credentials.md`.
 - UI: Create User has a Staff (view only) option; each user row has a role
   dropdown (admin only, not on your own row); sidebar badge shows "Staff".
 
+## SuperAdmin UI gates (Nov 2026)
+- Adding the superadmin role broke admin access in the UI because several gates
+  still tested `role === "admin"`. All now accept superadmin:
+  AppLayout.jsx (the /admin sidebar link), Login.jsx (post-login redirect to
+  /admin for superadmin|admin|staff), Bills/Documents/VendorProfile/WorkOrders
+  (`isAdmin`), and backend routers/documents.py (download + delete).
+
 ## Login bootstrap (Nov 2026) — production 401 fix
 - Logins live in AUTH_DB_NAME (`arun_vendor_auth`) in preview. Managed production
   Mongo authorizes only the single provisioned database, so reading that second DB

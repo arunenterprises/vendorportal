@@ -258,3 +258,29 @@ Restore when needed: `mongorestore --drop /var/backups/mongo/<date>`
 | Login works, data empty | run a sync; check `ARUN_PORTAL_*` values in `.env` |
 | Sync 502 / timeout | ERP unreachable → `curl -I https://erp.arunenterprisespryg.in/api` |
 | Nobody can log in | check `arun_vendor_auth` exists: `mongosh --eval 'db.getMongo().getDBNames()'` |
+
+## 14. Roles and logins (November 2026 update)
+
+| Role | What it can do |
+|---|---|
+| SuperAdmin | Everything, plus create portal users and change their role / permissions |
+| Admin | Change portal data (sync, payment status, work-order status, documents) |
+| Staff | View only; can be limited to chosen vendors |
+| Vendor | Sees only its own vendor details, work orders, bills and payment status |
+
+- Owner login: `arunenterprises2023@gmail.com` — role **SuperAdmin**. The backend
+  re-applies this role and the password from `ARUN_PORTAL_IDENTIFIER` /
+  `ARUN_PORTAL_PASSWORD` on every start, so the owner can never be locked out.
+- Vendors sign in with their **vendor code as BOTH the login ID and the password**.
+- **Staff vendor access**: Admin Command Center -> Portal Users -> "Vendor Access"
+  on a staff row. Tick the vendors that staff member may see; "Allow all" clears
+  the limit. A limited staff login then sees only those vendors everywhere —
+  dashboard, vendors, work orders, bills, payment register and the Excel export.
+
+## 15. One database or two?
+
+`AUTH_DB_NAME` decides where logins are stored. On your own VPS keep two
+databases (`arun_vendor_portal` + `arun_vendor_auth`) as described above. If a
+managed MongoDB only authorizes ONE database, simply set `AUTH_DB_NAME` to the
+same value as `DB_NAME` — the backend also detects this at startup and falls
+back to the main database by itself, logging a line instead of failing to boot.
