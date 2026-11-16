@@ -15,6 +15,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
+from lib.bootstrap import ensure_logins
 from lib.db import client, db, ensure_indexes
 
 
@@ -22,6 +23,7 @@ from lib.db import client, db, ensure_indexes
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.index_task = asyncio.create_task(ensure_indexes())  # background: a big index build must not block boot
+    await ensure_logins()  # a fresh deployment must never start with an empty login database
     yield
     client.close()
 
